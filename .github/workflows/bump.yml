@@ -61,4 +61,4 @@ jobs:
           commit-message: Bump version to ${{ steps.npm.outputs.new_version }}
           title: "Bump version to ${{ steps.npm.outputs.new_version }}"
           branch: "chore/bump-to-${{ steps.npm.outputs.new_version }}"
-          body: "View [CHANGES](https://github.com/${{ github.repository }}/compare/${{ steps.npm.outputs.old_version }}...${{ steps.npm.outputs.new_version }})"
+          body: "View [CHANGES](https://github.com/${{ github.repository }}/compare/main...chore/bump-to-${{ steps.npm.outputs.new_version }})"
