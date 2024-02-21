@@ -25,6 +25,7 @@ module.exports = {
             { from: "./src/app/index.html" },
             { from: "./src/app/style.css" },
             { from: "./src/app/github-logo.png" },
+            { from: "./src/app/favicon" },
         ],
     }),
   ],
