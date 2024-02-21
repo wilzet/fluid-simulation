@@ -149,24 +149,56 @@ impl RWTextureBuffer {
     pub fn resize(
         &mut self,
         gl: &WebGl2RenderingContext,
+        copy_program: Option<&Program>,
         width: u32,
         height: u32,
     ) -> Result<(), JsValue> {
         if width == self.read.width && height == self.read.height {
             return Ok(());
         }
-        self.read.delete(&gl);
-        self.write.delete(&gl);
 
-        let new_buffer = RWTextureBuffer::new(
+        let read = TextureFramebuffer::new(
             &gl,
             width,
             height,
-            Some(self.param),
+            self.param,
+        )?;
+        let write = TextureFramebuffer::new(
+            gl,
+            width,
+            height,
+            self.param,
         )?;
 
-        self.read = new_buffer.read;
-        self.write = new_buffer.write;
+        // COPY
+        if let Some(copy_program) = copy_program {
+            copy_program.bind(&gl);
+            gl.uniform1f(
+                copy_program.uniforms.get(shaders::U_FACTOR),
+                1.0,
+            );
+            gl.uniform1f(
+                copy_program.uniforms.get(shaders::U_OFFSET),
+                0.0,
+            );
+            gl.uniform1i(
+                copy_program.uniforms.get(shaders::U_TEXTURE),
+                self.read.bind(&gl, 0)?,
+            );
+
+            Renderer::blit(
+                &gl,
+                Some(&read),
+                None,
+            );
+        }
+
+        // DELETE AND SET
+        self.read.delete(&gl);
+        self.write.delete(&gl);
+
+        self.read = read;
+        self.write = write;
 
         Ok(())
     }

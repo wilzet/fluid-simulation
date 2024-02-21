@@ -696,12 +696,14 @@ impl Renderer {
         let (width, height) = Renderer::resolution_size(&self.canvas, sim_resolution);
         self.velocity_buffer.resize(
             &self.gl,
+            Some(&self.copy_program),
             width,
             height,
         )?;
 
         self.pressure_buffer.resize(
             &self.gl,
+            None,
             width,
             height,
         )?;
@@ -720,6 +722,7 @@ impl Renderer {
         let (width, height) = Renderer::resolution_size(&self.canvas, dye_resolution);
         self.dye_buffer.resize(
             &self.gl,
+            Some(&self.copy_program),
             width,
             height,
         )?;
