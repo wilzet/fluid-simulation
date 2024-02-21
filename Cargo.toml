@@ -1,12 +1,11 @@
 [package]
 name = "fluid-simulation"
 version = "0.1.0"
-description = "A WebGL fluid simulation compiled to Wasm using rust."
+description = "A WebGL fluid simulation compiled to Wasm using Rust."
 authors = ["wilzet"]
 edition = "2021"
 repository = "https://github.com/wilzet/fluid-simulation"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib"]

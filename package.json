@@ -7,6 +7,11 @@
     "dev": "webpack serve"
   },
   "author": "wilzet",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wilzet/fluid-simulation"
+  },
   "dependencies": {
     "dat.gui": "^0.7.9",
     "fluid-simulation": "file:./pkg"
