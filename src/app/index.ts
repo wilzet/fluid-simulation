@@ -1,12 +1,12 @@
+import * as dat from "dat.gui";
 import { Renderer, Resolution, Mode } from "fluid-simulation";
 import { isMobile, pixelScaling, randomColor, defaultColor } from "./utils";
 import Pointer from "./pointer";
-import * as dat from "dat.gui";
 
 const params = {
     isPaused: false,
     mode: Mode.DYE,
-    simResolution: isMobile() ? Resolution.EIGHT : Resolution.TWO,
+    simResolution: isMobile() ? Resolution.EIGHT : Resolution.FOUR,
     dyeResolution: isMobile() ? Resolution.FOUR : Resolution.TWO,
     pointerRadius: 0.2,
     pointerStrength: 10.0,
