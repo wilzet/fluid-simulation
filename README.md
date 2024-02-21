@@ -1,12 +1,12 @@
 <div align="center">
-  
+
   # [PLAY!](https://wilzet.github.io/fluid-simulation/)
-  <img height="100" src="https://github.com/wilzet/fluid-simulation/blob/main/src/app/favicon/android-chrome-512x512.png">
+  <a href="https://wilzet.github.io/fluid-simulation/"><img height="100" src="https://github.com/wilzet/fluid-simulation/blob/main/src/app/favicon/android-chrome-512x512.png"></a>
 </div>
 
 # Fluid Simulation
 
-<div align="center">
+<div align="center"></a>
 
   [![Version](https://img.shields.io/github/package-json/v/wilzet/fluid-simulation.svg?color=blue)]()
   [![MIT License](https://img.shields.io/badge/license-MIT-red.svg)](https://github.com/wilzet/fluid-simulation/LICENSE.md)
