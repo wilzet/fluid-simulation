@@ -28,7 +28,7 @@ jobs:
       - name: Check input
         id: input
         run: |
-          if [[ -z ${{ github.event.inputs.release_type }} ]]; then
+          if [[ -z "${{ github.event.inputs.release_type }}" ]]; then
             echo "release_type=patch" >> $GITHUB_OUTPUT
           else
             echo "release_type=${{ github.event.inputs.release_type }}" >> $GITHUB_OUTPUT
