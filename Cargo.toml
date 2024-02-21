@@ -1,6 +1,6 @@
 [package]
 name = "fluid-simulation"
-version = "0.1.0"
+version = "1.0.0"
 description = "A WebGL fluid simulation compiled to Wasm using Rust."
 authors = ["wilzet"]
 edition = "2021"
