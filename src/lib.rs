@@ -26,6 +26,14 @@ pub enum Resolution {
     SIXTEEN = 16,
 }
 
+#[derive(Clone, Copy)]
+#[wasm_bindgen]
+pub enum Mode {
+    DYE,
+    VELOCITY,
+    PRESSURE,
+}
+
 struct Program {
     program: WebGlProgram,
     uniforms: HashMap<String, WebGlUniformLocation>,
@@ -209,16 +217,30 @@ impl Renderer {
         );
     }
 
-    fn draw_pass(&self) -> Result<(), JsValue> {
+    fn draw_pass(&self, mode: Mode) -> Result<(), JsValue> {
         self.copy_program.bind(&self.gl);
 
         self.gl.uniform1f(
             self.copy_program.uniforms.get(shaders::U_FACTOR),
-            1.0,
+            match mode {
+                Mode::DYE => 1.0,
+                _ => 0.5,
+            },
         );
         self.gl.uniform1f(
             self.copy_program.uniforms.get(shaders::U_OFFSET),
-            0.0,
+            match mode {
+                Mode::DYE => 0.0,
+                _ => 0.5,
+            },
+        );
+        self.gl.uniform1i(
+            self.copy_program.uniforms.get(shaders::U_TEXTURE),
+            match mode {
+                Mode::DYE => self.dye_buffer.read().bind(&self.gl, 0)?,
+                Mode::VELOCITY => self.velocity_buffer.read().bind(&self.gl, 0)?,
+                Mode::PRESSURE => self.pressure_buffer.read().bind(&self.gl, 0)?,
+            },
         );
 
         Renderer::blit(
@@ -608,10 +630,9 @@ impl Renderer {
 
     pub fn update(
         &mut self,
+        pause: bool,
         time: f32,
-        position: &[f32],
-        velocity: &[f32],
-        radius: f32,
+        mode: Mode,
         viscosity: f32,
         dissipation: f32,
         curl: f32,
@@ -619,56 +640,46 @@ impl Renderer {
     ) -> Result<(), JsValue> {
         let delta_time = FPS_30.min(time - self.last_time);
         self.last_time = time;
-        let velocity = velocity
-            .iter()
-            .map(|v| {
-                v * delta_time
-            })
-            .collect::<Vec<_>>();
 
         // SIMULATION
-        let (width, height) = Renderer::resolution_size(&self.canvas, self.sim_resolution);
-        let sim_resolution = [width as f32, height as f32];
+        if !pause {
+            // UPDATE VELOCITY
+            let (width, height) = Renderer::resolution_size(&self.canvas, self.sim_resolution);
+            let sim_resolution = [width as f32, height as f32];
 
-        self.splat(
-            radius,
-            position,
-            &velocity,
-            &[0.0, 0.3, 0.5],
-        )?;
+            self.vorticity_confinement(&sim_resolution, curl)?;
 
-        self.vorticity_confinement(&sim_resolution, curl)?;
+            Renderer::advect(
+                &self.gl,
+                &self.advection_program,
+                &sim_resolution,
+                delta_time,
+                viscosity,
+                None,
+                &mut self.velocity_buffer,
+            )?;
 
-        Renderer::advect(
-            &self.gl,
-            &self.advection_program,
-            &sim_resolution,
-            delta_time,
-            viscosity,
-            None,
-            &mut self.velocity_buffer,
-        )?;
+            self.project_velocity(
+                &sim_resolution,
+                PRESSURE_ITERATIONS,
+                pressure,
+            )?;
 
-        self.project_velocity(
-            &sim_resolution,
-            PRESSURE_ITERATIONS,
-            pressure,
-        )?;
-
-        // UPDATE DYE
-        Renderer::advect(
-            &self.gl,
-            &self.advection_program,
-            &sim_resolution,
-            delta_time,
-            dissipation,
-            Some(&self.velocity_buffer),
-            &mut self.dye_buffer,
-        )?;
+            // UPDATE DYE
+            Renderer::advect(
+                &self.gl,
+                &self.advection_program,
+                &sim_resolution,
+                delta_time,
+                dissipation,
+                Some(&self.velocity_buffer),
+                &mut self.dye_buffer,
+            )?;
+        }
 
         // RENDER
         // DRAW TO CANVAS
-        self.draw_pass()?;
+        self.draw_pass(mode)?;
 
         Ok(())
     }
@@ -716,7 +727,7 @@ impl Renderer {
         Ok(())
     }
 
-    fn splat(
+    pub fn splat(
         &mut self,
         radius: f32,
         position: &[f32],
