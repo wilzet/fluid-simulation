@@ -1,0 +1,10 @@
+## Dependencies
+Cargo.lock
+
+## Build
+target/
+pkg/
+
+## Editor
+.vs/
+.vscode/
