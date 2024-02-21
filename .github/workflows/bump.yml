@@ -25,6 +25,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check input
+        id: input
+        run: |
+          if [[ -z ${{ github.event.inputs.release_type }} ]]; then
+            echo "release_type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "release_type=${{ github.event.inputs.release_type }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: cargo-bump cache
         uses: actions/cache@v4
         id: cargo-bump
@@ -38,13 +47,12 @@ jobs:
       - if: steps.cargo-bump.outputs.cache-hit != 'true'
         run: cargo install cargo-bump
 
-
       - name: Bump Cargo.toml version
-        run: cargo bump ${{ github.event.inputs.release_type }}
+        run: cargo bump ${{ steps.input.outputs.release_type }}
 
       - name: Bump package.json version
         id: npm
-        run: echo "new_version=$(npm version --commit-hooks false --git-tag-version false ${{ github.event.inputs.release_type }})" >> $GITHUB_OUTPUT
+        run: echo "new_version=$(npm version --commit-hooks false --git-tag-version false ${{ steps.input.outputs.release_type }})" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
