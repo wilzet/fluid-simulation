@@ -1,6 +1,6 @@
 use super::*;
 use web_sys::{
-    WebGlRenderingContext,
+    WebGl2RenderingContext,
     WebGlTexture,
     WebGlFramebuffer,
 };
@@ -15,55 +15,55 @@ pub struct TextureFramebuffer {
 
 impl TextureFramebuffer {
     pub fn new(
-        gl: &WebGlRenderingContext,
+        gl: &WebGl2RenderingContext,
         width: u32,
         height: u32,
         param: u32,
     ) -> Result<TextureFramebuffer, JsValue> {
-        gl.active_texture(WebGlRenderingContext::TEXTURE0);
+        gl.active_texture(WebGl2RenderingContext::TEXTURE0);
         let texture = gl.create_texture().unwrap();
-        gl.bind_texture(WebGlRenderingContext::TEXTURE_2D, Some(&texture));
+        gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
 
         gl.tex_parameteri(
-            WebGlRenderingContext::TEXTURE_2D,
-            WebGlRenderingContext::TEXTURE_MIN_FILTER,
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_MIN_FILTER,
             param as i32,
         );
         gl.tex_parameteri(
-            WebGlRenderingContext::TEXTURE_2D,
-            WebGlRenderingContext::TEXTURE_MAG_FILTER,
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_MAG_FILTER,
             param as i32,
         );
         gl.tex_parameteri(
-            WebGlRenderingContext::TEXTURE_2D,
-            WebGlRenderingContext::TEXTURE_WRAP_S,
-            WebGlRenderingContext::CLAMP_TO_EDGE as i32,
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_WRAP_S,
+            WebGl2RenderingContext::CLAMP_TO_EDGE as i32,
         );
         gl.tex_parameteri(
-            WebGlRenderingContext::TEXTURE_2D,
-            WebGlRenderingContext::TEXTURE_WRAP_T,
-            WebGlRenderingContext::CLAMP_TO_EDGE as i32,
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_WRAP_T,
+            WebGl2RenderingContext::CLAMP_TO_EDGE as i32,
         );
 
         let data = unsafe { js_sys::Float32Array::view(&vec![0.0; (width * height * 4) as usize]) };
         gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_array_buffer_view(
-            WebGlRenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_2D,
             0,
-            WebGlRenderingContext::RGBA as i32,
+            WebGl2RenderingContext::RGBA32F as i32,
             width as i32,
             height as i32,
             0,
-            WebGlRenderingContext::RGBA,
-            WebGlRenderingContext::FLOAT,
+            WebGl2RenderingContext::RGBA,
+            WebGl2RenderingContext::FLOAT,
             Some(&data),
         )?;
         
         let framebuffer = gl.create_framebuffer().unwrap();
-        gl.bind_framebuffer(WebGlRenderingContext::FRAMEBUFFER, Some(&framebuffer));
+        gl.bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, Some(&framebuffer));
         gl.framebuffer_texture_2d(
-            WebGlRenderingContext::FRAMEBUFFER,
-            WebGlRenderingContext::COLOR_ATTACHMENT0,
-            WebGlRenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::FRAMEBUFFER,
+            WebGl2RenderingContext::COLOR_ATTACHMENT0,
+            WebGl2RenderingContext::TEXTURE_2D,
             Some(&texture),
             0,
         );
@@ -78,7 +78,7 @@ impl TextureFramebuffer {
 
     pub fn bind(
         &self,
-        gl: &WebGlRenderingContext,
+        gl: &WebGl2RenderingContext,
         id: u32,
     ) -> Result<i32, JsValue> {
         if id >= 32 {
@@ -87,13 +87,13 @@ impl TextureFramebuffer {
             ));
         }
 
-        gl.active_texture(WebGlRenderingContext::TEXTURE0 + id);
-        gl.bind_texture(WebGlRenderingContext::TEXTURE_2D, Some(&self.texture));
+        gl.active_texture(WebGl2RenderingContext::TEXTURE0 + id);
+        gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&self.texture));
 
         Ok(id as i32)
     }
 
-    pub fn delete(&self, gl: &WebGlRenderingContext) {
+    pub fn delete(&self, gl: &WebGl2RenderingContext) {
         gl.delete_texture(Some(&self.texture));
         gl.delete_framebuffer(Some(&self.framebuffer));
     }
@@ -119,12 +119,12 @@ pub struct RWTextureBuffer {
 
 impl RWTextureBuffer {
     pub fn new(
-        gl: &WebGlRenderingContext,
+        gl: &WebGl2RenderingContext,
         width: u32,
         height: u32,
         param: Option<u32>,
     ) -> Result<RWTextureBuffer, JsValue> {
-        let param = param.unwrap_or(WebGlRenderingContext::LINEAR);
+        let param = param.unwrap_or(WebGl2RenderingContext::LINEAR);
 
         let read = TextureFramebuffer::new(
             gl,
@@ -148,7 +148,7 @@ impl RWTextureBuffer {
 
     pub fn resize(
         &mut self,
-        gl: &WebGlRenderingContext,
+        gl: &WebGl2RenderingContext,
         width: u32,
         height: u32,
     ) -> Result<(), JsValue> {

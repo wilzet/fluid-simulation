@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::{
     HtmlCanvasElement,
     WebGlProgram,
-    WebGlRenderingContext,
+    WebGl2RenderingContext,
     WebGlShader,
     WebGlUniformLocation,
 };
@@ -33,7 +33,7 @@ struct Program {
 
 impl Program {
     fn create_shader(
-        gl: &WebGlRenderingContext,
+        gl: &WebGl2RenderingContext,
         shader_type: u32,
         source: &str,
     ) -> Result<WebGlShader, JsValue> {
@@ -43,7 +43,7 @@ impl Program {
         gl.shader_source(&shader, source);
         gl.compile_shader(&shader);
 
-        if gl.get_shader_parameter(&shader, WebGlRenderingContext::COMPILE_STATUS)
+        if gl.get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
             .as_bool()
             .unwrap_or(false)
         {
@@ -57,19 +57,19 @@ impl Program {
     }
 
     fn new(
-        gl: &WebGlRenderingContext,
+        gl: &WebGl2RenderingContext,
         fragment_shader: &str,
         vertex_shader: &str,
     ) -> Result<Program, JsValue> {
         let vertex_shader = Program::create_shader(
             &gl,
-            WebGlRenderingContext::VERTEX_SHADER,
+            WebGl2RenderingContext::VERTEX_SHADER,
             vertex_shader
         )?;
     
         let fragment_shader = Program::create_shader(
             &gl,
-            WebGlRenderingContext::FRAGMENT_SHADER,
+            WebGl2RenderingContext::FRAGMENT_SHADER,
             &fragment_shader
         )?;
     
@@ -79,11 +79,11 @@ impl Program {
         gl.attach_shader(&shader_program, &fragment_shader);
         gl.link_program(&shader_program);
     
-        if gl.get_program_parameter(&shader_program, WebGlRenderingContext::LINK_STATUS)
+        if gl.get_program_parameter(&shader_program, WebGl2RenderingContext::LINK_STATUS)
             .as_bool()
             .unwrap_or(false)
         {
-            let count = gl.get_program_parameter(&shader_program, WebGlRenderingContext::ACTIVE_UNIFORMS)
+            let count = gl.get_program_parameter(&shader_program, WebGl2RenderingContext::ACTIVE_UNIFORMS)
                 .as_f64()
                 .ok_or_else(|| JsValue::from_str("Unable to get program parameters"))? as u32;
             let mut uniforms = HashMap::with_capacity(count as usize);
@@ -104,14 +104,14 @@ impl Program {
         ))
     }
     
-    fn bind(&self, gl: &WebGlRenderingContext) {
+    fn bind(&self, gl: &WebGl2RenderingContext) {
         gl.use_program(Some(&self.program));
     }
 }
 
 #[wasm_bindgen]
 pub struct Renderer {
-    gl: WebGlRenderingContext,
+    gl: WebGl2RenderingContext,
     canvas: HtmlCanvasElement,
     sim_resolution: Resolution,
     dye_resolution: Resolution,
@@ -131,9 +131,9 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    fn init_quad_buffers(gl: &WebGlRenderingContext) -> Result<(), JsValue> {
+    fn init_quad_buffers(gl: &WebGl2RenderingContext) -> Result<(), JsValue> {
         let vertex_buffer = gl.create_buffer().ok_or("Failed to create buffer")?;
-        gl.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&vertex_buffer));
+        gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&vertex_buffer));
 
         let vertices = [
             -1.0, -1.0, 0.0, 0.0,
@@ -143,15 +143,15 @@ impl Renderer {
         ];
         let vertices = unsafe { js_sys::Float32Array::view(&vertices) };
         gl.buffer_data_with_array_buffer_view(
-            WebGlRenderingContext::ARRAY_BUFFER,
+            WebGl2RenderingContext::ARRAY_BUFFER,
             &vertices,
-            WebGlRenderingContext::STATIC_DRAW,
+            WebGl2RenderingContext::STATIC_DRAW,
         );
 
         gl.vertex_attrib_pointer_with_i32(
             0,
             2,
-            WebGlRenderingContext::FLOAT,
+            WebGl2RenderingContext::FLOAT,
             false,
             16,
             0,
@@ -159,7 +159,7 @@ impl Renderer {
         gl.vertex_attrib_pointer_with_i32(
             1,
             2,
-            WebGlRenderingContext::FLOAT,
+            WebGl2RenderingContext::FLOAT,
             false,
             16,
             8,
@@ -172,7 +172,7 @@ impl Renderer {
     }
 
     fn blit(
-        gl: &WebGlRenderingContext,
+        gl: &WebGl2RenderingContext,
         target: Option<&TextureFramebuffer>,
         clear: Option<bool>,
     ) {
@@ -184,7 +184,7 @@ impl Renderer {
                     tfb.width() as i32,
                     tfb.height() as i32,
                 );
-                gl.bind_framebuffer(WebGlRenderingContext::FRAMEBUFFER, Some(tfb.buffer()));
+                gl.bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, Some(tfb.buffer()));
             }
             None => {
                 gl.viewport(
@@ -193,17 +193,17 @@ impl Renderer {
                     gl.drawing_buffer_width(),
                     gl.drawing_buffer_height(),
                 );
-                gl.bind_framebuffer(WebGlRenderingContext::FRAMEBUFFER, None);
+                gl.bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, None);
             }
         }
 
         if clear.unwrap_or(false) {
             gl.clear_color(0.0, 0.0, 0.0, 1.0);
-            gl.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+            gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
         }
 
         gl.draw_arrays(
-            WebGlRenderingContext::TRIANGLE_STRIP,
+            WebGl2RenderingContext::TRIANGLE_STRIP,
             0,
             4,
         );
@@ -231,7 +231,7 @@ impl Renderer {
     }
 
     fn advect(
-        gl: &WebGlRenderingContext,
+        gl: &WebGl2RenderingContext,
         advection_program: &Program,
         sim_resolution: &[f32; 2],
         delta_time: f32,
@@ -435,7 +435,7 @@ impl Renderer {
     }
 
     fn jacobi_solve(
-        gl: &WebGlRenderingContext,
+        gl: &WebGl2RenderingContext,
         jacobi_program: &Program,
         iterations: usize,
         resolution: &[f32; 2],
@@ -505,13 +505,12 @@ impl Renderer {
         js_sys::Reflect::set(&context_options, &"alpha".into(), &JsValue::TRUE)?;
         js_sys::Reflect::set(&context_options, &"depth".into(), &JsValue::FALSE)?;
         js_sys::Reflect::set(&context_options, &"stencil".into(), &JsValue::FALSE)?;
-        let gl = canvas.get_context_with_context_options("webgl", &context_options,)?.unwrap();
-        let gl = gl.dyn_into::<WebGlRenderingContext>().unwrap();
+        let gl = canvas.get_context_with_context_options("webgl2", &context_options,)?.unwrap();
+        let gl = gl.dyn_into::<WebGl2RenderingContext>().unwrap();
 
-        gl.get_extension("OES_texture_float")?;
         gl.get_extension("OES_texture_float_linear")?;
-        gl.get_extension("WEBGL_color_buffer_float")?;
-        gl.disable(WebGlRenderingContext::BLEND);
+        gl.get_extension("EXT_color_buffer_float")?;
+        gl.disable(WebGl2RenderingContext::BLEND);
 
         let copy_program = Program::new(
             &gl,
@@ -559,21 +558,21 @@ impl Renderer {
             &gl,
             width,
             height,
-            Some(WebGlRenderingContext::LINEAR),
+            Some(WebGl2RenderingContext::LINEAR),
         )?;
 
         let pressure_buffer = RWTextureBuffer::new(
             &gl,
             width,
             height,
-            Some(WebGlRenderingContext::LINEAR),
+            Some(WebGl2RenderingContext::LINEAR),
         )?;
 
         let temp_store = TextureFramebuffer::new(
             &gl,
             width,
             height,
-            WebGlRenderingContext::LINEAR,
+            WebGl2RenderingContext::LINEAR,
         )?;
 
         let (width, height) = Renderer::resolution_size(&canvas, dye_resolution);
@@ -581,7 +580,7 @@ impl Renderer {
             &gl,
             width,
             height,
-            Some(WebGlRenderingContext::LINEAR),
+            Some(WebGl2RenderingContext::LINEAR),
         )?;
 
         Renderer::init_quad_buffers(&gl)?;
@@ -702,7 +701,7 @@ impl Renderer {
                 &self.gl,
                 width,
                 height,
-                WebGlRenderingContext::LINEAR,
+                WebGl2RenderingContext::LINEAR,
             )?;
         }
         

@@ -22,7 +22,7 @@ features = [
     "Document",
     "Window",
     "HtmlCanvasElement",
-    "WebGlRenderingContext",
+    "WebGl2RenderingContext",
     "WebGlProgram",
     "WebGlShader",
     "WebGlTexture",
