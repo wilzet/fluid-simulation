@@ -3,7 +3,7 @@ name: Bump Version
 on:
   push:
     branches:
-      - 'main'
+      - 'releases/**'
   
   workflow_dispatch:
     inputs:
