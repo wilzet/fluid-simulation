@@ -108,6 +108,14 @@ const createGUI = () => {
     gui.add(params, "pointerStrength", 0.5, 100.0, 0.01).name("Strength");
     gui.add(params, "isPaused").name("Pause").onChange(() => wasPaused = !wasPaused).listen();
 
+    const gitHub = gui.add({ fun: () => window.open("https://github.com/wilzet/fluid-simulation") }, "fun").name("GitHub");
+    const list = gitHub.domElement.parentElement?.parentElement;
+    if (list) list.className += " link";
+    
+    const icon = document.createElement("div");
+    list?.appendChild(icon);
+    icon.className = "github";
+
     if (isMobile()) gui.close();
 }
 

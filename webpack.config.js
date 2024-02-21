@@ -24,6 +24,7 @@ module.exports = {
         patterns: [
             { from: "./src/app/index.html" },
             { from: "./src/app/style.css" },
+            { from: "./src/app/github-logo.png" },
         ],
     }),
   ],

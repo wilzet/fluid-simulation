@@ -43,3 +43,23 @@ canvas {
 .c div input[type="text"] {
     background-color: rgba(48, 48, 48, 0.5) !important;
 }
+
+ul:not(.closed) .link {
+    padding: 4px !important;
+    padding-left: 8px !important;
+    margin-left: 50% !important;
+    border-left: 8px solid rgb(230, 29, 95) !important;
+    font-size: 18px !important;
+    color: rgb(245, 245, 245) !important;
+}
+
+.github {
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-image: url(./github-logo.png) !important;
+    background-repeat: no-repeat !important;
+    background-position: 90% 50% !important;
+    background-size: contain !important;
+    filter: invert(1);
+}
