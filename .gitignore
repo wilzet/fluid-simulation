@@ -1,9 +1,12 @@
 ## Dependencies
 Cargo.lock
+package-lock.json
 
 ## Build
 target/
 pkg/
+node_modules/
+public/
 
 ## Editor
 .vs/
