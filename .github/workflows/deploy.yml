@@ -1,0 +1,64 @@
+name: GitHub Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Generate shaders.rs
+      if: ${{ github.ref == 'refs/heads/main' }}
+      run: python src/glsl-to-rust-stringify.py
+
+    - name: Get wasm-pack
+      uses: jetli/wasm-pack-action@v0.4.0
+
+    - name: Build Fluid Simulation
+      run: wasm-pack build
+
+    - name: Build App
+      run: |
+        npm install
+        npm run build
+
+    - name: Fix permissions
+      run: |
+        chmod -c -R +rX "public/" | while read line; do
+          echo "::warning title=Invalid file permissions automatically fixed::$line"
+        done
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: public/
+
+  deploy:
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

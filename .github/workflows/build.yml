@@ -1,0 +1,35 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - '**.rs'
+      - '**.glsl'
+      - '**.ts'
+      - '**.js'
+      - '**.css'
+      - '**.html'
+      - '**.py'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Generate shaders.rs
+      if: ${{ github.ref == 'refs/heads/main' }}
+      run: python src/glsl-to-rust-stringify.py
+
+    - name: Get wasm-pack
+      uses: jetli/wasm-pack-action@v0.4.0
+
+    - name: Build test
+      run: |
+        wasm-pack build --verbose
+        npm install --verbose
+        npm run build --verbose

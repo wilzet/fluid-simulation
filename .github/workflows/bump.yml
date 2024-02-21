@@ -1,0 +1,56 @@
+name: Bump Version
+
+on:
+  push:
+    branches:
+      - 'main'
+  
+  workflow_dispatch:
+    inputs:
+      release_type:
+        type: choice
+        description: Release type
+        options:
+        - major
+        - minor
+        - patch
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: cargo-bump cache
+        uses: actions/cache@v4
+        id: cargo-bump
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-bump
+      - if: steps.cargo-bump.outputs.cache-hit != 'true'
+        run: cargo install cargo-bump
+
+
+      - name: Bump Cargo.toml version
+        run: cargo bump ${{ github.event.inputs.release_type }}
+
+      - name: Bump package.json version
+        id: npm
+        run: echo "new_version=$(npm version --commit-hooks false --git-tag-version false ${{ github.event.inputs.release_type }})" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.PAT }}
+          commit-message: Bump version to ${{ steps.npm.outputs.new_version }}
+          title: "Bump version to ${{ steps.npm.outputs.new_version }}"
+          branch: "chore/bump-to-${{ steps.npm.outputs.new_version }}"
+          body: "View [CHANGES](https://github.com/${{ github.repository }}/compare/${{ steps.npm.outputs.old_version }}...${{ steps.npm.outputs.new_version }})"
