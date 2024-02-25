@@ -45,11 +45,11 @@ canvas {
 }
 
 ul:not(.closed) .link {
+    font: 20px/27px "Trebuchet MS", sans-serif !important;
     padding: 4px !important;
     padding-left: 8px !important;
-    margin-left: 50% !important;
+    margin-left: 40% !important;
     border-left: 8px solid rgb(230, 29, 95) !important;
-    font-size: 18px !important;
     color: rgb(245, 245, 245) !important;
 }
 
