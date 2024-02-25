@@ -1,3 +1,5 @@
+//! A fluid simulation that is compiled using `wasm-pack` and runs in the browser
+
 mod shaders;
 mod textures;
 mod renderer;
@@ -18,6 +20,7 @@ const FPS_30: f32 = 0.0333333;
 #[repr(u8)]
 #[derive(Clone, Copy)]
 #[wasm_bindgen]
+/// Describes the scaling of a texture used by the [renderer](Renderer)
 pub enum Resolution {
     ONE = 1,
     TWO = 2,
@@ -28,6 +31,7 @@ pub enum Resolution {
 
 #[derive(Clone, Copy)]
 #[wasm_bindgen]
+/// Mode for the draw pass of the [renderer](Renderer)
 pub enum Mode {
     DYE,
     VELOCITY,
@@ -35,6 +39,7 @@ pub enum Mode {
 }
 
 #[wasm_bindgen]
+/// Renderer for the fluid simulation
 pub struct Renderer {
     gl: Option<WebGlRenderingContext>,
     gl2: Option<WebGl2RenderingContext>,
@@ -58,6 +63,20 @@ pub struct Renderer {
 
 #[wasm_bindgen]
 impl Renderer {
+    /// Create a new renderer
+    ///
+    /// There should really only ever exist one renderer.
+    /// 
+    /// # Arguments
+    /// * `canvas_id` - id of the canvas element
+    /// * `sim_resolution` - A [Resolution](Resolution) describing the scaling of the simulation in relation to the window size
+    /// * `dye_resolution` - A [Resolution](Resolution) describing the scaling of the dye in relation to the window size
+    /// 
+    /// # Returns
+    /// The renderer object, or an error if neither the WebGL, nor the WebGL2, rendering context can be found.
+    ///
+    /// # Panics
+    /// May panic if no html elements can be found.
     pub fn create (
         canvas_id: &str,
         sim_resolution: Resolution,
@@ -96,6 +115,21 @@ impl Renderer {
         
     }
 
+    /// Update the renderer
+    /// 
+    /// Updates the simulation according to the provided arguments.
+    /// 
+    /// # Arguments
+    /// * `pause` - Should the simulation be paused?
+    /// * `time` - Current time (may be current datetime or time since the beginning of the program run but needs to be consistent)
+    /// * `mode` - Rendering [mode](Mode)
+    /// * `viscosity` - Energy loss of the fluid due to friction (>= 0) 
+    /// * `dissipation` - Colored dye fading amount (>= 0)
+    /// * `curl` - Curl amount [0, 1]
+    /// * `pressure` - Pressure coefficient for converging pressure calculation
+    /// 
+    /// # Returns
+    /// May return an error if something in the WebGL pipeline were to break.
     pub fn update(
         &mut self,
         pause: bool,
@@ -140,6 +174,16 @@ impl Renderer {
         )
     }
 
+    /// Resize the renderer
+    /// 
+    /// Resizes the textures and buffers used in the simulation.
+    /// 
+    /// # Arguments
+    /// * `sim_resolution` - A [Resolution](Resolution) describing the scaling of the simulation in relation to the window size
+    /// * `dye_resolution` - A [Resolution](Resolution) describing the scaling of the dye in relation to the window size
+    /// 
+    /// # Returns
+    /// May return an error if something in the WebGL pipeline were to break.
     pub fn resize(
         &mut self,
         sim_resolution: Resolution,
@@ -164,6 +208,21 @@ impl Renderer {
         )
     }
 
+    /// Create a splat
+    /// 
+    /// Adds a splat of force and color to the simulation.
+    /// 
+    /// # Arguments
+    /// * `radius` - Radius of the splat in pixels
+    /// * `position` - A float array that should have two values, an x and a y position in screen coordinates
+    /// * `velocity` - A float array that should have two values, an x and a y velocity
+    /// * `color` - A float array that should have three values, a red, a green, and a blue color value
+    /// 
+    /// # Returns
+    /// May return an error if something in the WebGL pipeline were to break.
+    ///
+    /// # Panics
+    /// If either `position` or `velocity` contains fewer than two values, or if `color` contains fewer than three values.
     pub fn splat(
         &mut self,
         radius: f32,
