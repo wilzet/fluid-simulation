@@ -282,7 +282,7 @@ impl RWTextureBuffer {
 
         // COPY
         if let Some(copy_program) = copy_program {
-            copy_program.bind_webgl(&gl);
+            copy_program.bind_webgl(gl);
             gl.uniform1f(
                 copy_program.uniforms.get(shaders::U_FACTOR),
                 1.0,
@@ -293,19 +293,19 @@ impl RWTextureBuffer {
             );
             gl.uniform1i(
                 copy_program.uniforms.get(shaders::U_TEXTURE),
-                self.read.bind_webgl(&gl, 0)?,
+                self.read.bind_webgl(gl, 0)?,
             );
 
             Renderer::blit_webgl(
-                &gl,
+                gl,
                 Some(&new_buffer.read),
                 None,
             );
         }
 
         // DELETE AND SET
-        self.read.delete_webgl(&gl);
-        self.write.delete_webgl(&gl);
+        self.read.delete_webgl(gl);
+        self.write.delete_webgl(gl);
 
         self.read = new_buffer.read;
         self.write = new_buffer.write;
@@ -333,7 +333,7 @@ impl RWTextureBuffer {
 
         // COPY
         if let Some(copy_program) = copy_program {
-            copy_program.bind_webgl2(&gl);
+            copy_program.bind_webgl2(gl);
             gl.uniform1f(
                 copy_program.uniforms.get(shaders::U_FACTOR),
                 1.0,
@@ -344,19 +344,19 @@ impl RWTextureBuffer {
             );
             gl.uniform1i(
                 copy_program.uniforms.get(shaders::U_TEXTURE),
-                self.read.bind_webgl2(&gl, 0)?,
+                self.read.bind_webgl2(gl, 0)?,
             );
 
             Renderer::blit_webgl2(
-                &gl,
+                gl,
                 Some(&new_buffer.read),
                 None,
             );
         }
 
         // DELETE AND SET
-        self.read.delete_webgl2(&gl);
-        self.write.delete_webgl2(&gl);
+        self.read.delete_webgl2(gl);
+        self.write.delete_webgl2(gl);
 
         self.read = new_buffer.read;
         self.write = new_buffer.write;

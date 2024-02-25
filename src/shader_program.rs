@@ -68,13 +68,13 @@ impl ShaderProgram {
         vertex_shader: &str,
     ) -> Result<ShaderProgram, JsValue> {
         let vertex_shader = ShaderProgram::create_shader_webgl(
-            &gl,
+            gl,
             WebGl2RenderingContext::VERTEX_SHADER,
             vertex_shader
         )?;
     
         let fragment_shader = ShaderProgram::create_shader_webgl(
-            &gl,
+            gl,
             WebGl2RenderingContext::FRAGMENT_SHADER,
             &fragment_shader
         )?;
@@ -116,13 +116,13 @@ impl ShaderProgram {
         vertex_shader: &str,
     ) -> Result<ShaderProgram, JsValue> {
         let vertex_shader = ShaderProgram::create_shader_webgl2(
-            &gl,
+            gl,
             WebGl2RenderingContext::VERTEX_SHADER,
             vertex_shader
         )?;
     
         let fragment_shader = ShaderProgram::create_shader_webgl2(
-            &gl,
+            gl,
             WebGl2RenderingContext::FRAGMENT_SHADER,
             &fragment_shader
         )?;

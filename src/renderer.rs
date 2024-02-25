@@ -220,7 +220,7 @@ impl Renderer {
         x: &mut RWTextureBuffer,
         b: Option<&TextureFramebuffer>,
     ) -> Result<(), JsValue> {
-        jacobi_program.bind_webgl(&gl);
+        jacobi_program.bind_webgl(gl);
 
         gl.uniform1f(
             jacobi_program.uniforms.get(shaders::U_ALPHA),
@@ -237,18 +237,18 @@ impl Renderer {
         gl.uniform1i(
             jacobi_program.uniforms.get(shaders::U_B),
             b.and_then(|b|
-                b.bind_webgl(&gl, 1).ok()
+                b.bind_webgl(gl, 1).ok()
             ).unwrap_or(0),
         );
 
         for _ in 0..iterations {
             gl.uniform1i(
                 jacobi_program.uniforms.get(shaders::U_X),
-                x.read().bind_webgl(&gl, 0)?,
+                x.read().bind_webgl(gl, 0)?,
             );
 
             Renderer::blit_webgl(
-                &gl,
+                gl,
                 Some(x.write()),
                 None,
             );
@@ -263,7 +263,7 @@ impl Renderer {
         gl: &WebGlRenderingContext,
         mode: Mode,
     ) -> Result<(), JsValue> {
-        self.copy_program.bind_webgl(&gl);
+        self.copy_program.bind_webgl(gl);
 
         gl.uniform1f(
             self.copy_program.uniforms.get(shaders::U_FACTOR),
@@ -282,14 +282,14 @@ impl Renderer {
         gl.uniform1i(
             self.copy_program.uniforms.get(shaders::U_TEXTURE),
             match mode {
-                Mode::DYE => self.dye_buffer.read().bind_webgl(&gl, 0)?,
-                Mode::VELOCITY => self.velocity_buffer.read().bind_webgl(&gl, 0)?,
-                Mode::PRESSURE => self.pressure_buffer.read().bind_webgl(&gl, 0)?,
+                Mode::DYE => self.dye_buffer.read().bind_webgl(gl, 0)?,
+                Mode::VELOCITY => self.velocity_buffer.read().bind_webgl(gl, 0)?,
+                Mode::PRESSURE => self.pressure_buffer.read().bind_webgl(gl, 0)?,
             },
         );
 
         Renderer::blit_webgl(
-            &gl,
+            gl,
             None,
             Some(true),
         );
@@ -306,7 +306,7 @@ impl Renderer {
         velocity_buffer: Option<&RWTextureBuffer>,
         quantity: &mut RWTextureBuffer,
     ) -> Result<(), JsValue> {
-        advection_program.bind_webgl(&gl);
+        advection_program.bind_webgl(gl);
 
         gl.uniform1f(
             advection_program.uniforms.get(shaders::U_DISSIPATION),
@@ -323,16 +323,16 @@ impl Renderer {
         gl.uniform1i(
             advection_program.uniforms.get(shaders::U_VELOCITY),
             velocity_buffer.and_then(|b|
-                b.read().bind_webgl(&gl, 1).ok()
+                b.read().bind_webgl(gl, 1).ok()
             ).unwrap_or(0),
         );
         gl.uniform1i(
             advection_program.uniforms.get(shaders::U_QUANTITY),
-            quantity.read().bind_webgl(&gl, 0)?,
+            quantity.read().bind_webgl(gl, 0)?,
         );
 
         Renderer::blit_webgl(
-            &gl,
+            gl,
             Some(quantity.write()),
             None,
         );
@@ -351,7 +351,7 @@ impl Renderer {
         let r_half_texel = 0.5 / (self.sim_resolution as u32 as f32);
 
         // DIVERGENCE
-        self.divergence_program.bind_webgl(&gl);
+        self.divergence_program.bind_webgl(gl);
 
         gl.uniform1f(
             self.divergence_program.uniforms.get(shaders::U_R_HALF_TEXEL_SIZE),
@@ -363,17 +363,17 @@ impl Renderer {
         );
         gl.uniform1i(
             self.divergence_program.uniforms.get(shaders::U_VELOCITY),
-            self.velocity_buffer.read().bind_webgl(&gl, 0)?,
+            self.velocity_buffer.read().bind_webgl(gl, 0)?,
         );
 
         Renderer::blit_webgl(
-            &gl,
+            gl,
             Some(&self.temp_store),
             None,
         );
 
         // PRESSURE
-        self.copy_program.bind_webgl(&gl);
+        self.copy_program.bind_webgl(gl);
 
         gl.uniform1f(
             self.copy_program.uniforms.get(shaders::U_FACTOR),
@@ -385,11 +385,11 @@ impl Renderer {
         );
         gl.uniform1i(
             self.copy_program.uniforms.get(shaders::U_TEXTURE),
-            self.pressure_buffer.read().bind_webgl(&gl, 0)?,
+            self.pressure_buffer.read().bind_webgl(gl, 0)?,
         );
 
         Renderer::blit_webgl(
-            &gl,
+            gl,
             Some(self.pressure_buffer.write()),
             None,
         );
@@ -399,7 +399,7 @@ impl Renderer {
         let alpha = -alpha * alpha;
         let r_beta = 0.25;
         Renderer::jacobi_solve_webgl(
-            &gl,
+            gl,
             &self.jacobi_program,
             iterations,
             sim_resolution,
@@ -410,7 +410,7 @@ impl Renderer {
         )?;
 
         // SUBTRACTION
-        self.subtraction_program.bind_webgl(&gl);
+        self.subtraction_program.bind_webgl(gl);
 
         gl.uniform1f(
             self.subtraction_program.uniforms.get(shaders::U_R_HALF_TEXEL_SIZE),
@@ -422,15 +422,15 @@ impl Renderer {
         );
         gl.uniform1i(
             self.subtraction_program.uniforms.get(shaders::U_VELOCITY),
-            self.velocity_buffer.read().bind_webgl(&gl, 0)?,
+            self.velocity_buffer.read().bind_webgl(gl, 0)?,
         );
         gl.uniform1i(
             self.subtraction_program.uniforms.get(shaders::U_PRESSURE),
-            self.pressure_buffer.read().bind_webgl(&gl, 1)?,
+            self.pressure_buffer.read().bind_webgl(gl, 1)?,
         );
 
         Renderer::blit_webgl(
-            &gl,
+            gl,
             Some(self.velocity_buffer.write()),
             None,
         );
@@ -448,7 +448,7 @@ impl Renderer {
         let r_half_texel = 0.5 / (self.sim_resolution as u32 as f32);
 
         // CURL
-        self.curl_program.bind_webgl(&gl);
+        self.curl_program.bind_webgl(gl);
 
         gl.uniform1f(
             self.curl_program.uniforms.get(shaders::U_R_HALF_TEXEL_SIZE),
@@ -460,17 +460,17 @@ impl Renderer {
         );
         gl.uniform1i(
             self.curl_program.uniforms.get(shaders::U_VELOCITY),
-            self.velocity_buffer.read().bind_webgl(&gl, 0)?,
+            self.velocity_buffer.read().bind_webgl(gl, 0)?,
         );
 
         Renderer::blit_webgl(
-            &gl,
+            gl,
             Some(&self.temp_store),
             None,
         );
 
         // VORTICITY CONFINEMENT
-        self.vorticity_program.bind_webgl(&gl);
+        self.vorticity_program.bind_webgl(gl);
 
         gl.uniform1f(
             self.vorticity_program.uniforms.get(shaders::U_CURL_SCALE),
@@ -486,15 +486,15 @@ impl Renderer {
         );
         gl.uniform1i(
             self.vorticity_program.uniforms.get(shaders::U_CURL),
-            self.temp_store.bind_webgl(&gl, 0)?,
+            self.temp_store.bind_webgl(gl, 0)?,
         );
         gl.uniform1i(
             self.vorticity_program.uniforms.get(shaders::U_VELOCITY),
-            self.velocity_buffer.read().bind_webgl(&gl, 1)?,
+            self.velocity_buffer.read().bind_webgl(gl, 1)?,
         );
 
         Renderer::blit_webgl(
-            &gl,
+            gl,
             Some(self.velocity_buffer.write()),
             None,
         );
@@ -519,13 +519,13 @@ impl Renderer {
         if !pause {
             // UPDATE VELOCITY
             self.vorticity_confinement_webgl(
-                &gl,
+                gl,
                 &sim_resolution,
                 curl,
             )?;
 
             Renderer::advect_webgl(
-                &gl,
+                gl,
                 &self.advection_program,
                 &sim_resolution,
                 delta_time,
@@ -535,7 +535,7 @@ impl Renderer {
             )?;
 
             self.project_velocity_webgl(
-                &gl,
+                gl,
                 &sim_resolution,
                 PRESSURE_ITERATIONS,
                 pressure,
@@ -543,7 +543,7 @@ impl Renderer {
 
             // UPDATE DYE
             Renderer::advect_webgl(
-                &gl,
+                gl,
                 &self.advection_program,
                 &sim_resolution,
                 delta_time,
@@ -555,7 +555,7 @@ impl Renderer {
 
         // RENDER
         // DRAW TO CANVAS
-        self.draw_pass_webgl(&gl, mode)?;
+        self.draw_pass_webgl(gl, mode)?;
 
         Ok(())
     }
@@ -569,23 +569,23 @@ impl Renderer {
         // SIMULATION
         let (width, height) = Renderer::resolution_size(&self.canvas, sim_resolution);
         self.velocity_buffer.resize_webgl(
-            &gl,
+            gl,
             Some(&self.copy_program),
             width,
             height,
         )?;
 
         self.pressure_buffer.resize_webgl(
-            &gl,
+            gl,
             None,
             width,
             height,
         )?;
 
         if width != self.temp_store.width() || height != self.temp_store.height() {
-            self.temp_store.delete_webgl(&gl);
+            self.temp_store.delete_webgl(gl);
             self.temp_store = TextureFramebuffer::new_webgl(
-                &gl,
+                gl,
                 width,
                 height,
                 WebGl2RenderingContext::LINEAR,
@@ -595,7 +595,7 @@ impl Renderer {
         // DYE
         let (width, height) = Renderer::resolution_size(&self.canvas, dye_resolution);
         self.dye_buffer.resize_webgl(
-            &gl,
+            gl,
             Some(&self.copy_program),
             width,
             height,
@@ -614,7 +614,7 @@ impl Renderer {
     ) -> Result<(), JsValue> {
         // APPLY FORCE
         let resolution = self.sim_resolution as u32 as f32;
-        self.splat_program.bind_webgl(&gl);
+        self.splat_program.bind_webgl(gl);
 
         gl.uniform1f(
             self.splat_program.uniforms.get(shaders::U_SCALED_RADIUS),
@@ -633,11 +633,11 @@ impl Renderer {
         );
         gl.uniform1i(
             self.splat_program.uniforms.get(shaders::U_TEXTURE),
-            self.velocity_buffer.read().bind_webgl(&gl, 0)?,
+            self.velocity_buffer.read().bind_webgl(gl, 0)?,
         );
 
         Renderer::blit_webgl(
-            &gl,
+            gl,
             Some(self.velocity_buffer.write()),
             None,
         );
@@ -660,11 +660,11 @@ impl Renderer {
         );
         gl.uniform1i(
             self.splat_program.uniforms.get(shaders::U_TEXTURE),
-            self.dye_buffer.read().bind_webgl(&gl, 0)?,
+            self.dye_buffer.read().bind_webgl(gl, 0)?,
         );
 
         Renderer::blit_webgl(
-            &gl,
+            gl,
             Some(self.dye_buffer.write()),
             None,
         );
@@ -871,7 +871,7 @@ impl Renderer {
         x: &mut RWTextureBuffer,
         b: Option<&TextureFramebuffer>,
     ) -> Result<(), JsValue> {
-        jacobi_program.bind_webgl2(&gl);
+        jacobi_program.bind_webgl2(gl);
 
         gl.uniform1f(
             jacobi_program.uniforms.get(shaders::U_ALPHA),
@@ -888,18 +888,18 @@ impl Renderer {
         gl.uniform1i(
             jacobi_program.uniforms.get(shaders::U_B),
             b.and_then(|b|
-                b.bind_webgl2(&gl, 1).ok()
+                b.bind_webgl2(gl, 1).ok()
             ).unwrap_or(0),
         );
 
         for _ in 0..iterations {
             gl.uniform1i(
                 jacobi_program.uniforms.get(shaders::U_X),
-                x.read().bind_webgl2(&gl, 0)?,
+                x.read().bind_webgl2(gl, 0)?,
             );
 
             Renderer::blit_webgl2(
-                &gl,
+                gl,
                 Some(x.write()),
                 None,
             );
@@ -914,7 +914,7 @@ impl Renderer {
         gl: &WebGl2RenderingContext,
         mode: Mode,
     ) -> Result<(), JsValue> {
-        self.copy_program.bind_webgl2(&gl);
+        self.copy_program.bind_webgl2(gl);
 
         gl.uniform1f(
             self.copy_program.uniforms.get(shaders::U_FACTOR),
@@ -933,14 +933,14 @@ impl Renderer {
         gl.uniform1i(
             self.copy_program.uniforms.get(shaders::U_TEXTURE),
             match mode {
-                Mode::DYE => self.dye_buffer.read().bind_webgl2(&gl, 0)?,
-                Mode::VELOCITY => self.velocity_buffer.read().bind_webgl2(&gl, 0)?,
-                Mode::PRESSURE => self.pressure_buffer.read().bind_webgl2(&gl, 0)?,
+                Mode::DYE => self.dye_buffer.read().bind_webgl2(gl, 0)?,
+                Mode::VELOCITY => self.velocity_buffer.read().bind_webgl2(gl, 0)?,
+                Mode::PRESSURE => self.pressure_buffer.read().bind_webgl2(gl, 0)?,
             },
         );
 
         Renderer::blit_webgl2(
-            &gl,
+            gl,
             None,
             Some(true),
         );
@@ -957,7 +957,7 @@ impl Renderer {
         velocity_buffer: Option<&RWTextureBuffer>,
         quantity: &mut RWTextureBuffer,
     ) -> Result<(), JsValue> {
-        advection_program.bind_webgl2(&gl);
+        advection_program.bind_webgl2(gl);
 
         gl.uniform1f(
             advection_program.uniforms.get(shaders::U_DISSIPATION),
@@ -974,16 +974,16 @@ impl Renderer {
         gl.uniform1i(
             advection_program.uniforms.get(shaders::U_VELOCITY),
             velocity_buffer.and_then(|b|
-                b.read().bind_webgl2(&gl, 1).ok()
+                b.read().bind_webgl2(gl, 1).ok()
             ).unwrap_or(0),
         );
         gl.uniform1i(
             advection_program.uniforms.get(shaders::U_QUANTITY),
-            quantity.read().bind_webgl2(&gl, 0)?,
+            quantity.read().bind_webgl2(gl, 0)?,
         );
 
         Renderer::blit_webgl2(
-            &gl,
+            gl,
             Some(quantity.write()),
             None,
         );
@@ -1002,7 +1002,7 @@ impl Renderer {
         let r_half_texel = 0.5 / (self.sim_resolution as u32 as f32);
 
         // DIVERGENCE
-        self.divergence_program.bind_webgl2(&gl);
+        self.divergence_program.bind_webgl2(gl);
 
         gl.uniform1f(
             self.divergence_program.uniforms.get(shaders::U_R_HALF_TEXEL_SIZE),
@@ -1014,17 +1014,17 @@ impl Renderer {
         );
         gl.uniform1i(
             self.divergence_program.uniforms.get(shaders::U_VELOCITY),
-            self.velocity_buffer.read().bind_webgl2(&gl, 0)?,
+            self.velocity_buffer.read().bind_webgl2(gl, 0)?,
         );
 
         Renderer::blit_webgl2(
-            &gl,
+            gl,
             Some(&self.temp_store),
             None,
         );
 
         // PRESSURE
-        self.copy_program.bind_webgl2(&gl);
+        self.copy_program.bind_webgl2(gl);
 
         gl.uniform1f(
             self.copy_program.uniforms.get(shaders::U_FACTOR),
@@ -1036,11 +1036,11 @@ impl Renderer {
         );
         gl.uniform1i(
             self.copy_program.uniforms.get(shaders::U_TEXTURE),
-            self.pressure_buffer.read().bind_webgl2(&gl, 0)?,
+            self.pressure_buffer.read().bind_webgl2(gl, 0)?,
         );
 
         Renderer::blit_webgl2(
-            &gl,
+            gl,
             Some(self.pressure_buffer.write()),
             None,
         );
@@ -1050,7 +1050,7 @@ impl Renderer {
         let alpha = -alpha * alpha;
         let r_beta = 0.25;
         Renderer::jacobi_solve_webgl2(
-            &gl,
+            gl,
             &self.jacobi_program,
             iterations,
             sim_resolution,
@@ -1061,7 +1061,7 @@ impl Renderer {
         )?;
 
         // SUBTRACTION
-        self.subtraction_program.bind_webgl2(&gl);
+        self.subtraction_program.bind_webgl2(gl);
 
         gl.uniform1f(
             self.subtraction_program.uniforms.get(shaders::U_R_HALF_TEXEL_SIZE),
@@ -1073,15 +1073,15 @@ impl Renderer {
         );
         gl.uniform1i(
             self.subtraction_program.uniforms.get(shaders::U_VELOCITY),
-            self.velocity_buffer.read().bind_webgl2(&gl, 0)?,
+            self.velocity_buffer.read().bind_webgl2(gl, 0)?,
         );
         gl.uniform1i(
             self.subtraction_program.uniforms.get(shaders::U_PRESSURE),
-            self.pressure_buffer.read().bind_webgl2(&gl, 1)?,
+            self.pressure_buffer.read().bind_webgl2(gl, 1)?,
         );
 
         Renderer::blit_webgl2(
-            &gl,
+            gl,
             Some(self.velocity_buffer.write()),
             None,
         );
@@ -1099,7 +1099,7 @@ impl Renderer {
         let r_half_texel = 0.5 / (self.sim_resolution as u32 as f32);
 
         // CURL
-        self.curl_program.bind_webgl2(&gl);
+        self.curl_program.bind_webgl2(gl);
 
         gl.uniform1f(
             self.curl_program.uniforms.get(shaders::U_R_HALF_TEXEL_SIZE),
@@ -1111,17 +1111,17 @@ impl Renderer {
         );
         gl.uniform1i(
             self.curl_program.uniforms.get(shaders::U_VELOCITY),
-            self.velocity_buffer.read().bind_webgl2(&gl, 0)?,
+            self.velocity_buffer.read().bind_webgl2(gl, 0)?,
         );
 
         Renderer::blit_webgl2(
-            &gl,
+            gl,
             Some(&self.temp_store),
             None,
         );
 
         // VORTICITY CONFINEMENT
-        self.vorticity_program.bind_webgl2(&gl);
+        self.vorticity_program.bind_webgl2(gl);
 
         gl.uniform1f(
             self.vorticity_program.uniforms.get(shaders::U_CURL_SCALE),
@@ -1137,15 +1137,15 @@ impl Renderer {
         );
         gl.uniform1i(
             self.vorticity_program.uniforms.get(shaders::U_CURL),
-            self.temp_store.bind_webgl2(&gl, 0)?,
+            self.temp_store.bind_webgl2(gl, 0)?,
         );
         gl.uniform1i(
             self.vorticity_program.uniforms.get(shaders::U_VELOCITY),
-            self.velocity_buffer.read().bind_webgl2(&gl, 1)?,
+            self.velocity_buffer.read().bind_webgl2(gl, 1)?,
         );
 
         Renderer::blit_webgl2(
-            &gl,
+            gl,
             Some(self.velocity_buffer.write()),
             None,
         );
@@ -1170,13 +1170,13 @@ impl Renderer {
         if !pause {
             // UPDATE VELOCITY
             self.vorticity_confinement_webgl2(
-                &gl,
+                gl,
                 sim_resolution,
                 curl,
             )?;
 
             Renderer::advect_webgl2(
-                &gl,
+                gl,
                 &self.advection_program,
                 &sim_resolution,
                 delta_time,
@@ -1186,7 +1186,7 @@ impl Renderer {
             )?;
 
             self.project_velocity_webgl2(
-                &gl,
+                gl,
                 &sim_resolution,
                 PRESSURE_ITERATIONS,
                 pressure,
@@ -1194,7 +1194,7 @@ impl Renderer {
 
             // UPDATE DYE
             Renderer::advect_webgl2(
-                &gl,
+                gl,
                 &self.advection_program,
                 sim_resolution,
                 delta_time,
@@ -1206,7 +1206,7 @@ impl Renderer {
 
         // RENDER
         // DRAW TO CANVAS
-        self.draw_pass_webgl2(&gl, mode)?;
+        self.draw_pass_webgl2(gl, mode)?;
 
         Ok(())
     }
@@ -1220,23 +1220,23 @@ impl Renderer {
         // SIMULATION
         let (width, height) = Renderer::resolution_size(&self.canvas, sim_resolution);
         self.velocity_buffer.resize_webgl2(
-            &gl,
+            gl,
             Some(&self.copy_program),
             width,
             height,
         )?;
 
         self.pressure_buffer.resize_webgl2(
-            &gl,
+            gl,
             None,
             width,
             height,
         )?;
 
         if width != self.temp_store.width() || height != self.temp_store.height() {
-            self.temp_store.delete_webgl2(&gl);
+            self.temp_store.delete_webgl2(gl);
             self.temp_store = TextureFramebuffer::new_webgl2(
-                &gl,
+                gl,
                 width,
                 height,
                 WebGl2RenderingContext::LINEAR,
@@ -1246,7 +1246,7 @@ impl Renderer {
         // DYE
         let (width, height) = Renderer::resolution_size(&self.canvas, dye_resolution);
         self.dye_buffer.resize_webgl2(
-            &gl,
+            gl,
             Some(&self.copy_program),
             width,
             height,
@@ -1265,7 +1265,7 @@ impl Renderer {
     ) -> Result<(), JsValue> {
         // APPLY FORCE
         let resolution = self.sim_resolution as u32 as f32;
-        self.splat_program.bind_webgl2(&gl);
+        self.splat_program.bind_webgl2(gl);
 
         gl.uniform1f(
             self.splat_program.uniforms.get(shaders::U_SCALED_RADIUS),
@@ -1284,11 +1284,11 @@ impl Renderer {
         );
         gl.uniform1i(
             self.splat_program.uniforms.get(shaders::U_TEXTURE),
-            self.velocity_buffer.read().bind_webgl2(&gl, 0)?,
+            self.velocity_buffer.read().bind_webgl2(gl, 0)?,
         );
 
         Renderer::blit_webgl2(
-            &gl,
+            gl,
             Some(self.velocity_buffer.write()),
             None,
         );
@@ -1311,11 +1311,11 @@ impl Renderer {
         );
         gl.uniform1i(
             self.splat_program.uniforms.get(shaders::U_TEXTURE),
-            self.dye_buffer.read().bind_webgl2(&gl, 0)?,
+            self.dye_buffer.read().bind_webgl2(gl, 0)?,
         );
 
         Renderer::blit_webgl2(
-            &gl,
+            gl,
             Some(self.dye_buffer.write()),
             None,
         );
