@@ -104,19 +104,11 @@ impl Renderer {
         )?;
 
         let (width, height) = Renderer::resolution_size(&canvas, dye_resolution);
-        let render_buffer = TextureFramebuffer::new_webgl(
-            &gl,
-            width,
-            height,
-            WebGlRenderingContext::UNSIGNED_BYTE,
-            WebGlRenderingContext::LINEAR,
-        )?;
-
         let dye_buffer = RWTextureBuffer::new_webgl(
             &gl,
             width,
             height,
-            Some(WebGlRenderingContext::FLOAT),
+            Some(WebGlRenderingContext::UNSIGNED_BYTE),
             Some(WebGlRenderingContext::LINEAR),
         )?;
 
@@ -140,7 +132,6 @@ impl Renderer {
             pressure_buffer,
             dye_buffer,
             temp_store,
-            render_buffer,
             last_time: 0.0,
         })
     }
@@ -299,25 +290,6 @@ impl Renderer {
                 Mode::VELOCITY => self.velocity_buffer.read().bind_webgl(gl, 0)?,
                 Mode::PRESSURE => self.pressure_buffer.read().bind_webgl(gl, 0)?,
             },
-        );
-
-        Renderer::blit_webgl(
-            gl,
-            Some(&self.render_buffer),
-            Some(true),
-        );
-
-        gl.uniform1f(
-            self.copy_program.uniforms.get(shaders::U_FACTOR),
-            1.0,
-        );
-        gl.uniform1f(
-            self.copy_program.uniforms.get(shaders::U_OFFSET),
-            0.0,
-        );
-        gl.uniform1i(
-            self.copy_program.uniforms.get(shaders::U_TEXTURE),
-            self.render_buffer.bind_webgl(gl, 0)?,
         );
 
         Renderer::blit_webgl(
@@ -634,17 +606,6 @@ impl Renderer {
             height,
         )?;
 
-        if width != self.render_buffer.width() || height != self.render_buffer.height() {
-            self.render_buffer.delete_webgl(gl);
-            self.render_buffer = TextureFramebuffer::new_webgl(
-                gl,
-                width,
-                height,
-                WebGlRenderingContext::UNSIGNED_BYTE,
-                WebGlRenderingContext::LINEAR,
-            )?;
-        }
-
         Ok(())
     }
 
@@ -799,19 +760,11 @@ impl Renderer {
         )?;
 
         let (width, height) = Renderer::resolution_size(&canvas, dye_resolution);
-        let render_buffer = TextureFramebuffer::new_webgl2(
-            &gl,
-            width,
-            height,
-            WebGl2RenderingContext::UNSIGNED_BYTE,
-            WebGl2RenderingContext::LINEAR,
-        )?;
-
         let dye_buffer = RWTextureBuffer::new_webgl2(
             &gl,
             width,
             height,
-            Some(WebGl2RenderingContext::FLOAT),
+            Some(WebGl2RenderingContext::UNSIGNED_BYTE),
             Some(WebGl2RenderingContext::LINEAR),
         )?;
 
@@ -835,7 +788,6 @@ impl Renderer {
             pressure_buffer,
             dye_buffer,
             temp_store,
-            render_buffer,
             last_time: 0.0,
         })
     }
@@ -994,31 +946,6 @@ impl Renderer {
                 Mode::VELOCITY => self.velocity_buffer.read().bind_webgl2(gl, 0)?,
                 Mode::PRESSURE => self.pressure_buffer.read().bind_webgl2(gl, 0)?,
             },
-        );
-
-        Renderer::blit_webgl2(
-            gl,
-            Some(&self.render_buffer),
-            Some(true),
-        );
-
-        gl.uniform1f(
-            self.copy_program.uniforms.get(shaders::U_FACTOR),
-            1.0,
-        );
-        gl.uniform1f(
-            self.copy_program.uniforms.get(shaders::U_OFFSET),
-            0.0,
-        );
-        gl.uniform1i(
-            self.copy_program.uniforms.get(shaders::U_TEXTURE),
-            self.render_buffer.bind_webgl2(gl, 0)?,
-        );
-
-        Renderer::blit_webgl2(
-            gl,
-            None,
-            Some(true),
         );
 
         Renderer::blit_webgl2(
@@ -1334,17 +1261,6 @@ impl Renderer {
             width,
             height,
         )?;
-
-        if width != self.render_buffer.width() || height != self.render_buffer.height() {
-            self.render_buffer.delete_webgl2(gl);
-            self.render_buffer = TextureFramebuffer::new_webgl2(
-                gl,
-                width,
-                height,
-                WebGl2RenderingContext::UNSIGNED_BYTE,
-                WebGl2RenderingContext::LINEAR,
-            )?;
-        }
 
         Ok(())
     }
