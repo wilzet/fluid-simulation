@@ -83,7 +83,6 @@ impl Renderer {
             &gl,
             width,
             height,
-            Some(WebGlRenderingContext::FLOAT),
             Some(WebGlRenderingContext::LINEAR),
         )?;
 
@@ -91,7 +90,6 @@ impl Renderer {
             &gl,
             width,
             height,
-            Some(WebGlRenderingContext::FLOAT),
             Some(WebGlRenderingContext::LINEAR),
         )?;
 
@@ -99,7 +97,6 @@ impl Renderer {
             &gl,
             width,
             height,
-            WebGlRenderingContext::FLOAT,
             WebGlRenderingContext::LINEAR,
         )?;
 
@@ -108,7 +105,6 @@ impl Renderer {
             &gl,
             width,
             height,
-            Some(WebGlRenderingContext::UNSIGNED_BYTE),
             Some(WebGlRenderingContext::LINEAR),
         )?;
 
@@ -592,8 +588,7 @@ impl Renderer {
                 gl,
                 width,
                 height,
-                WebGlRenderingContext::FLOAT,
-                WebGlRenderingContext::LINEAR,
+                WebGl2RenderingContext::LINEAR,
             )?;
         }
         
@@ -739,7 +734,6 @@ impl Renderer {
             &gl,
             width,
             height,
-            Some(WebGl2RenderingContext::FLOAT),
             Some(WebGl2RenderingContext::LINEAR),
         )?;
 
@@ -747,7 +741,6 @@ impl Renderer {
             &gl,
             width,
             height,
-            Some(WebGl2RenderingContext::FLOAT),
             Some(WebGl2RenderingContext::LINEAR),
         )?;
 
@@ -755,7 +748,6 @@ impl Renderer {
             &gl,
             width,
             height,
-            WebGl2RenderingContext::FLOAT,
             WebGl2RenderingContext::LINEAR,
         )?;
 
@@ -764,7 +756,6 @@ impl Renderer {
             &gl,
             width,
             height,
-            Some(WebGl2RenderingContext::UNSIGNED_BYTE),
             Some(WebGl2RenderingContext::LINEAR),
         )?;
 
@@ -1248,7 +1239,6 @@ impl Renderer {
                 gl,
                 width,
                 height,
-                WebGl2RenderingContext::FLOAT,
                 WebGl2RenderingContext::LINEAR,
             )?;
         }
