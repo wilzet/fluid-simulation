@@ -1,6 +1,13 @@
 name: Bump Version
 
 on:
+  push:
+    branches:
+      - 'main'
+    paths-ignore:
+      - 'package.json'
+      - 'Cargo.toml'
+
   workflow_dispatch:
     inputs:
       release_type:
