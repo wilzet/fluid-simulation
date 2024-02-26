@@ -22,6 +22,7 @@ impl TextureFramebuffer {
         gl: &WebGlRenderingContext,
         width: u32,
         height: u32,
+        format: u32,
         param: u32,
     ) -> Result<TextureFramebuffer, JsValue> {
         gl.active_texture(WebGlRenderingContext::TEXTURE0);
@@ -49,18 +50,34 @@ impl TextureFramebuffer {
             WebGlRenderingContext::CLAMP_TO_EDGE as i32,
         );
 
-        let data = unsafe { js_sys::Float32Array::view(&vec![0.0; (width * height * 4) as usize]) };
-        gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_array_buffer_view(
-            WebGlRenderingContext::TEXTURE_2D,
-            0,
-            WebGlRenderingContext::RGBA as i32,
-            width as i32,
-            height as i32,
-            0,
-            WebGlRenderingContext::RGBA,
-            WebGlRenderingContext::FLOAT,
-            Some(&data),
-        )?;
+        match format {
+            WebGlRenderingContext::FLOAT => {
+                let data = unsafe { js_sys::Float32Array::view(&vec![0.0; (width * height * 4) as usize]) };
+                gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_array_buffer_view(
+                    WebGlRenderingContext::TEXTURE_2D,
+                    0,
+                    WebGlRenderingContext::RGBA as i32,
+                    width as i32,
+                    height as i32,
+                    0,
+                    WebGlRenderingContext::RGBA,
+                    WebGlRenderingContext::FLOAT,
+                    Some(&data),
+                )?;
+            },
+            WebGlRenderingContext::UNSIGNED_BYTE => gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
+                WebGlRenderingContext::TEXTURE_2D,
+                0,
+                WebGlRenderingContext::RGBA as i32,
+                width as i32,
+                height as i32,
+                0,
+                WebGlRenderingContext::RGBA,
+                WebGlRenderingContext::UNSIGNED_BYTE,
+                Some(&vec![0; (width * height * 4) as usize]),
+            )?,
+            _ => return Err(JsValue::from_str("Incorrect format")),
+        };
         
         let framebuffer = gl.create_framebuffer().unwrap();
         gl.bind_framebuffer(WebGlRenderingContext::FRAMEBUFFER, Some(&framebuffer));
@@ -84,6 +101,7 @@ impl TextureFramebuffer {
         gl: &WebGl2RenderingContext,
         width: u32,
         height: u32,
+        format: u32,
         param: u32,
     ) -> Result<TextureFramebuffer, JsValue> {
         gl.active_texture(WebGl2RenderingContext::TEXTURE0);
@@ -111,18 +129,34 @@ impl TextureFramebuffer {
             WebGl2RenderingContext::CLAMP_TO_EDGE as i32,
         );
 
-        let data = unsafe { js_sys::Float32Array::view(&vec![0.0; (width * height * 4) as usize]) };
-        gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_array_buffer_view(
-            WebGl2RenderingContext::TEXTURE_2D,
-            0,
-            WebGl2RenderingContext::RGBA32F as i32,
-            width as i32,
-            height as i32,
-            0,
-            WebGl2RenderingContext::RGBA,
-            WebGl2RenderingContext::FLOAT,
-            Some(&data),
-        )?;
+        match format {
+            WebGl2RenderingContext::FLOAT => {
+                let data = unsafe { js_sys::Float32Array::view(&vec![0.0; (width * height * 4) as usize]) };
+                gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_array_buffer_view(
+                    WebGl2RenderingContext::TEXTURE_2D,
+                    0,
+                    WebGl2RenderingContext::RGBA32F as i32,
+                    width as i32,
+                    height as i32,
+                    0,
+                    WebGl2RenderingContext::RGBA,
+                    WebGl2RenderingContext::FLOAT,
+                    Some(&data),
+                )?;
+            },
+            WebGl2RenderingContext::UNSIGNED_BYTE => gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
+                WebGl2RenderingContext::TEXTURE_2D,
+                0,
+                WebGl2RenderingContext::RGBA as i32,
+                width as i32,
+                height as i32,
+                0,
+                WebGl2RenderingContext::RGBA,
+                WebGl2RenderingContext::UNSIGNED_BYTE,
+                Some(&vec![0; (width * height * 4) as usize]),
+            )?,
+            _ => return Err(JsValue::from_str("Incorrect format")),
+        };
         
         let framebuffer = gl.create_framebuffer().unwrap();
         gl.bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, Some(&framebuffer));
@@ -202,6 +236,7 @@ impl TextureFramebuffer {
 pub struct RWTextureBuffer {
     read: TextureFramebuffer,
     write: TextureFramebuffer,
+    format: u32,
     param: u32,
 }
 
@@ -210,26 +245,31 @@ impl RWTextureBuffer {
         gl: &WebGlRenderingContext,
         width: u32,
         height: u32,
+        format: Option<u32>,
         param: Option<u32>,
     ) -> Result<RWTextureBuffer, JsValue> {
+        let format = format.unwrap_or(WebGlRenderingContext::UNSIGNED_BYTE);
         let param = param.unwrap_or(WebGlRenderingContext::LINEAR);
 
         let read = TextureFramebuffer::new_webgl(
             gl,
             width,
             height,
+            format,
             param,
         )?;
         let write = TextureFramebuffer::new_webgl(
             gl,
             width,
             height,
+            format,
             param,
         )?;
 
         Ok(RWTextureBuffer {
             read,
             write,
+            format,
             param,
         })
     }
@@ -238,26 +278,31 @@ impl RWTextureBuffer {
         gl: &WebGl2RenderingContext,
         width: u32,
         height: u32,
+        format: Option<u32>,
         param: Option<u32>,
     ) -> Result<RWTextureBuffer, JsValue> {
+        let format = format.unwrap_or(WebGl2RenderingContext::UNSIGNED_BYTE);
         let param = param.unwrap_or(WebGl2RenderingContext::LINEAR);
 
         let read = TextureFramebuffer::new_webgl2(
             gl,
             width,
             height,
+            format,
             param,
         )?;
         let write = TextureFramebuffer::new_webgl2(
             gl,
             width,
             height,
+            format,
             param,
         )?;
 
         Ok(RWTextureBuffer {
             read,
             write,
+            format,
             param,
         })
     }
@@ -276,7 +321,8 @@ impl RWTextureBuffer {
         let new_buffer = RWTextureBuffer::new_webgl(
             gl,
             width,
-            height, 
+            height,
+            Some(self.format),
             Some(self.param),
         )?;
 
@@ -327,7 +373,8 @@ impl RWTextureBuffer {
         let new_buffer = RWTextureBuffer::new_webgl2(
             gl,
             width,
-            height, 
+            height,
+            Some(self.format),
             Some(self.param),
         )?;
 
