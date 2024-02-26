@@ -11,7 +11,7 @@ const params = {
     pointerRadius: 0.2,
     pointerStrength: 10.0,
     viscosity: 1.0,
-    dissipation: 1.0,
+    dissipation: 2.0,
     curl: 0.25,
     pressure: 0.8,
     color: defaultColor,
