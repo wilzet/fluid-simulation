@@ -58,6 +58,7 @@ pub struct Renderer {
     pressure_buffer: RWTextureBuffer,
     dye_buffer: RWTextureBuffer,
     temp_store: TextureFramebuffer,
+    render_buffer: TextureFramebuffer,
     last_time: f32,
 }
 
