@@ -36,10 +36,9 @@ jobs:
       with:
         path: ./node_modules/
         key: ${{ runner.os }}-node_modules
-    - if: steps.npm-cache.outputs.cache-hit != 'true'
-      run: npm install --verbose
 
     - name: Build test
       run: |
         wasm-pack build --verbose
+        npm install --verbose
         npm run build --verbose
