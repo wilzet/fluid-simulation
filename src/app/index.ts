@@ -8,9 +8,9 @@ const params = {
     mode: Mode.DYE,
     simResolution: isMobile() ? Resolution.EIGHT : Resolution.FOUR,
     dyeResolution: isMobile() ? Resolution.FOUR : Resolution.TWO,
-    pointerRadius: 0.2,
+    pointerRadius: isMobile() ? 0.4 : 0.2,
     pointerStrength: 10.0,
-    viscosity: 1.0,
+    viscosity: 0.5,
     dissipation: 2.0,
     curl: 0.25,
     pressure: 0.8,
@@ -93,7 +93,7 @@ const createGUI = () => {
         .onFinishChange(resizeCanvas);
     simulationFolder.add(params, "viscosity", 0.0, 5.0, 0.01).name("Viscosity");
     simulationFolder.add(params, "dissipation", 0.0, 5.0, 0.01).name("Dye diffusion");
-    simulationFolder.add(params, "curl", 0.0, 1.0, 0.01).name("Vorticity amount");
+    simulationFolder.add(params, "curl", 0.0, 2.0, 0.01).name("Vorticity amount");
     simulationFolder.add(params, "pressure", 0.0, 1.0, 0.01).name("Pressure");
     simulationFolder.open();
 
