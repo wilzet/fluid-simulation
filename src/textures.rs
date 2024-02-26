@@ -4,6 +4,7 @@ use web_sys::{
     WebGl2RenderingContext,
     WebGlTexture,
     WebGlFramebuffer,
+    OesTextureHalfFloat,
 };
 use std::mem;
 use crate::Renderer;
@@ -49,7 +50,7 @@ impl TextureFramebuffer {
             WebGlRenderingContext::CLAMP_TO_EDGE as i32,
         );
 
-        let data = unsafe { js_sys::Float32Array::view(&vec![0.0; (width * height * 4) as usize]) };
+        let data = unsafe { js_sys::Uint16Array::view(&vec![0; (width * height * 4) as usize]) };
         gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_array_buffer_view(
             WebGlRenderingContext::TEXTURE_2D,
             0,
@@ -58,7 +59,7 @@ impl TextureFramebuffer {
             height as i32,
             0,
             WebGlRenderingContext::RGBA,
-            WebGlRenderingContext::FLOAT,
+            OesTextureHalfFloat::HALF_FLOAT_OES,
             Some(&data),
         )?;
         
@@ -111,16 +112,16 @@ impl TextureFramebuffer {
             WebGl2RenderingContext::CLAMP_TO_EDGE as i32,
         );
 
-        let data = unsafe { js_sys::Float32Array::view(&vec![0.0; (width * height * 4) as usize]) };
+        let data = unsafe { js_sys::Uint16Array::view(&vec![0; (width * height * 4) as usize]) };
         gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_array_buffer_view(
             WebGl2RenderingContext::TEXTURE_2D,
             0,
-            WebGl2RenderingContext::RGBA32F as i32,
+            WebGl2RenderingContext::RGBA16F as i32,
             width as i32,
             height as i32,
             0,
             WebGl2RenderingContext::RGBA,
-            WebGl2RenderingContext::FLOAT,
+            WebGl2RenderingContext::HALF_FLOAT,
             Some(&data),
         )?;
         

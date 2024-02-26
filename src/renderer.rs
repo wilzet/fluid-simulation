@@ -32,9 +32,9 @@ impl Renderer {
     ) -> Result<Renderer, JsValue> {
         let gl = gl.dyn_into::<WebGlRenderingContext>().unwrap();
 
-        gl.get_extension("OES_texture_float")?;
-        gl.get_extension("OES_texture_float_linear")?;
-        gl.get_extension("WEBGL_color_buffer_float")?;
+        gl.get_extension("OES_texture_half_float")?;
+        gl.get_extension("OES_texture_half_float_linear")?;
+        gl.get_extension("EXT_color_buffer_half_float")?;
         gl.disable(WebGlRenderingContext::BLEND);
 
         let copy_program = ShaderProgram::new_webgl(
@@ -684,7 +684,6 @@ impl Renderer {
     ) -> Result<Renderer, JsValue> {
         let gl = gl.dyn_into::<WebGl2RenderingContext>().unwrap();
 
-        gl.get_extension("OES_texture_float_linear")?;
         gl.get_extension("EXT_color_buffer_float")?;
         gl.disable(WebGl2RenderingContext::BLEND);
 
