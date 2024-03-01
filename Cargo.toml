@@ -21,8 +21,6 @@ features = [
     "Document",
     "Window",
     "HtmlCanvasElement",
-    "OesTextureHalfFloat",
-    "WebGlRenderingContext",
     "WebGl2RenderingContext",
     "WebGlProgram",
     "WebGlShader",

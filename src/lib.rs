@@ -6,13 +6,9 @@ mod renderer;
 mod shader_program;
 
 use wasm_bindgen::prelude::*;
-use web_sys::{
-    HtmlCanvasElement,
-    WebGlRenderingContext,
-    WebGl2RenderingContext,
-};
-use crate::shader_program::ShaderProgram;
+use web_sys::{ HtmlCanvasElement, WebGl2RenderingContext };
 use crate::textures::{ TextureFramebuffer, RWTextureBuffer };
+use crate::shader_program::ShaderProgram;
 
 const PRESSURE_ITERATIONS: usize = 20;
 const FPS_30: f32 = 0.0333333;
@@ -41,8 +37,7 @@ pub enum Mode {
 #[wasm_bindgen]
 /// Renderer for the fluid simulation
 pub struct Renderer {
-    gl: Option<WebGlRenderingContext>,
-    gl2: Option<WebGl2RenderingContext>,
+    gl: WebGl2RenderingContext,
     canvas: HtmlCanvasElement,
     sim_resolution: Resolution,
     dye_resolution: Resolution,
@@ -92,27 +87,16 @@ impl Renderer {
         js_sys::Reflect::set(&context_options, &"alpha".into(), &JsValue::TRUE)?;
         js_sys::Reflect::set(&context_options, &"depth".into(), &JsValue::FALSE)?;
         js_sys::Reflect::set(&context_options, &"stencil".into(), &JsValue::FALSE)?;
-        
-        // TRY WEBGL2
+
         match canvas.get_context_with_context_options("webgl2", &context_options) {
-            Ok(Some(gl)) => Renderer::new_webgl2(
+            Ok(Some(gl)) => Renderer::new(
                 gl,
                 canvas,
                 sim_resolution,
                 dye_resolution,
             ),
-            // TRY WEBGL
-            _ => match canvas.get_context_with_context_options("webgl", &context_options) {
-                Ok(Some(gl)) => Renderer::new_webgl(
-                    gl,
-                    canvas,
-                    sim_resolution,
-                    dye_resolution,
-                ),
-                _ => Err(JsValue::from_str("WebGL seems to not be enabled in the browser")),
-            },
+            _ => Err(JsValue::from_str("WebGL 2 seems to not be enabled in the browser")),
         }
-        
     }
 
     /// Update the renderer
@@ -146,32 +130,47 @@ impl Renderer {
         let (width, height) = Renderer::resolution_size(&self.canvas, self.sim_resolution);
         let sim_resolution = [width as f32, height as f32];
 
-        if let Some(gl) = &self.gl2.clone() {
-            return self.update_webgl2(
-                gl,
-                pause,
-                delta_time,
+        // SIMULATION
+        if !pause {
+            // UPDATE VELOCITY
+            self.vorticity_confinement(
                 &sim_resolution,
-                mode,
-                viscosity,
-                dissipation,
                 curl,
+            )?;
+
+            Renderer::advect(
+                &self.gl,
+                &self.advection_program,
+                &sim_resolution,
+                delta_time,
+                viscosity,
+                None,
+                &mut self.velocity_buffer,
+            )?;
+
+            self.project_velocity(
+                &sim_resolution,
+                PRESSURE_ITERATIONS,
                 pressure,
-            );
+            )?;
+
+            // UPDATE DYE
+            Renderer::advect(
+                &self.gl,
+                &self.advection_program,
+                &sim_resolution,
+                delta_time,
+                dissipation,
+                Some(&self.velocity_buffer),
+                &mut self.dye_buffer,
+            )?;
         }
 
-        let gl = &self.gl.clone().ok_or_else(|| JsValue::from_str("No WebGL rendering context found"))?;
-        self.update_webgl(
-            gl,
-            pause,
-            delta_time,
-            &sim_resolution,
-            mode,
-            viscosity,
-            dissipation,
-            curl,
-            pressure,
-        )
+        // RENDER
+        // DRAW TO CANVAS
+        self.draw_pass(mode)?;
+
+        Ok(())
     }
 
     /// Resize the renderer
@@ -189,23 +188,46 @@ impl Renderer {
         sim_resolution: Resolution,
         dye_resolution: Resolution,
     ) -> Result<(), JsValue> {
+        let gl = &self.gl;
         self.sim_resolution = sim_resolution;
         self.dye_resolution = dye_resolution;
-
-        if let Some(gl) = &self.gl2.clone() {
-            return self.resize_webgl2(
-                gl,
-                sim_resolution,
-                dye_resolution,
-            );
-        }
-            
-        let gl = &self.gl.clone().ok_or_else(|| JsValue::from_str("No WebGL rendering context found"))?;
-        self.resize_webgl(
+        
+        // SIMULATION
+        let (width, height) = Renderer::resolution_size(&self.canvas, sim_resolution);
+        self.velocity_buffer.resize(
             gl,
-            sim_resolution,
-            dye_resolution,
-        )
+            Some(&self.copy_program),
+            width,
+            height,
+        )?;
+
+        self.pressure_buffer.resize(
+            gl,
+            None,
+            width,
+            height,
+        )?;
+
+        if width != self.temp_store.width() || height != self.temp_store.height() {
+            self.temp_store.delete(gl);
+            self.temp_store = TextureFramebuffer::new(
+                gl,
+                width,
+                height,
+                WebGl2RenderingContext::LINEAR,
+            )?;
+        }
+        
+        // DYE
+        let (width, height) = Renderer::resolution_size(&self.canvas, dye_resolution);
+        self.dye_buffer.resize(
+            gl,
+            Some(&self.copy_program),
+            width,
+            height,
+        )?;
+
+        Ok(())
     }
 
     /// Create a splat
@@ -230,23 +252,66 @@ impl Renderer {
         velocity: &[f32],
         color: &[f32],
     ) -> Result<(), JsValue> {
-        if let Some(gl) = &self.gl2.clone() {
-            return self.splat_webgl2(
-                gl,
-                radius,
-                position,
-                velocity,
-                color,
-            );
-        }
-        
-        let gl = &self.gl.clone().ok_or_else(|| JsValue::from_str("No WebGL rendering context found"))?;
-        self.splat_webgl(
+        let gl = &self.gl;
+        self.splat_program.bind(gl);
+
+        // APPLY FORCE
+        let resolution = self.sim_resolution as u32 as f32;
+
+        gl.uniform1f(
+            self.splat_program.uniforms.get(shaders::U_SCALED_RADIUS),
+            radius / (resolution * resolution),
+        );
+        gl.uniform2f(
+            self.splat_program.uniforms.get(shaders::U_POSITION),
+            position[0] / resolution,
+            position[1] / resolution,
+        );
+        gl.uniform3f(
+            self.splat_program.uniforms.get(shaders::U_COLOR),
+            velocity[0] / resolution,
+            velocity[1] / resolution,
+            0.0,
+        );
+        gl.uniform1i(
+            self.splat_program.uniforms.get(shaders::U_TEXTURE),
+            self.velocity_buffer.read().bind(gl, 0)?,
+        );
+
+        Renderer::blit(
             gl,
-            radius,
-            position,
-            velocity,
+            Some(self.velocity_buffer.write()),
+            None,
+        );
+        self.velocity_buffer.swap();
+
+        // APPLY COLOR
+        let resolution = self.dye_resolution as u32 as f32;
+        gl.uniform1f(
+            self.splat_program.uniforms.get(shaders::U_SCALED_RADIUS),
+            radius / (resolution * resolution),
+        );
+        gl.uniform2f(
+            self.splat_program.uniforms.get(shaders::U_POSITION),
+            position[0] / resolution,
+            position[1] / resolution,
+        );
+        gl.uniform3fv_with_f32_array(
+            self.splat_program.uniforms.get(shaders::U_COLOR),
             color,
-        )
+        );
+        gl.uniform1i(
+            self.splat_program.uniforms.get(shaders::U_TEXTURE),
+            self.dye_buffer.read().bind(gl, 0)?,
+        );
+
+        Renderer::blit(
+            gl,
+            Some(self.dye_buffer.write()),
+            None,
+        );
+        self.dye_buffer.swap();
+
+        Ok(())
     }
 }
