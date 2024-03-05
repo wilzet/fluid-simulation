@@ -1,6 +1,7 @@
 import * as dat from "dat.gui";
 import { Renderer, Resolution, Mode } from "fluid-simulation";
 import { isMobile, pixelScaling, randomColor, defaultColor } from "./utils";
+import { Params, Config } from "./params";
 import Pointer from "./pointer";
 
 const params = {
@@ -17,7 +18,8 @@ const params = {
     pressure: 0.8,
     color: defaultColor,
     useRandomColor: true,
-}
+    config: Config.NONE,
+} as Params;
 let wasPaused = false;
 
 const canvasId = "canvas";
@@ -31,6 +33,8 @@ const renderer = Renderer.create(
 
 const pointer = new Pointer([0, 0]);
 const pointerColor = new Float32Array(params.color.map((v) => v / 255.0));
+let configPosition = new Float32Array([0.0, 0.0]);
+let configVelocity = new Float32Array([0.0, 0.0]);
 
 const generateColor = () => {
     if (!params.useRandomColor) return;
@@ -40,6 +44,29 @@ const generateColor = () => {
         pointerColor[i] = v;
         params.color[i] = v * 255.0;
     });
+}
+
+const spellConfig = (radius: number) => {
+    configPosition[0] = 100.0;
+    configPosition[1] = canvas.height / 2.0;
+    configVelocity[0] = 10.0 * params.pointerStrength;
+    let color = randomColor(0, 10, 0.6, 0.9, 0.2, 0.3);
+    renderer.splat(
+        radius,
+        configPosition,
+        configVelocity,
+        new Float32Array(color),
+    );
+
+    configPosition[0] = canvas.width - 100.0;
+    configVelocity[0] = -configVelocity[0];
+    color = randomColor(215, 225, 0.2, 0.6, 0.2, 0.3);
+    renderer.splat(
+        radius,
+        configPosition,
+        configVelocity,
+        new Float32Array(color),
+    );
 }
 
 const resizeCanvas = () => {
@@ -111,6 +138,15 @@ const createGUI = () => {
     }).listen();
     colorFolder.add(params, "useRandomColor").name("Random color").listen();
     
+    gui.add(
+        params,
+        "config",
+        {
+            "None": Config.NONE,
+            "Spell": Config.SPELL,
+        },
+    )
+        .name("Configuration");
     gui.add(params, "pointerRadius", 0.01, 1.0, 0.01).name("Radius");
     gui.add(params, "pointerStrength", 0.5, 100.0, 0.01).name("Strength");
     gui.add(params, "isPaused").name("Pause").onChange(() => wasPaused = !wasPaused).listen();
@@ -128,16 +164,20 @@ const createGUI = () => {
 const update = (timestamp: number) => {
     requestAnimationFrame(update);
 
+    const radius = params.pointerRadius * Math.min(canvas.width, canvas.height) * 10.0;
+
     if (pointer.isMoved) {
         renderer.splat(
-            params.pointerRadius * Math.min(canvas.width, canvas.height) * 10.0,
+            radius,
             pointer.getPosition,
             pointer.getVelocity,
             pointerColor,
         );
     }
 
-    pointer.resetMove();
+    if (!params.isPaused) {
+        if (params.config == Config.SPELL) spellConfig(radius);
+    }
 
     renderer.update(
         params.isPaused,
@@ -149,6 +189,8 @@ const update = (timestamp: number) => {
         -params.curl,
         params.pressure,
     );
+
+    pointer.resetMove();
 }
 
 const pointerEvents = () => {
