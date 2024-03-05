@@ -10,7 +10,7 @@ use web_sys::{ HtmlCanvasElement, WebGl2RenderingContext };
 use crate::textures::{ TextureFramebuffer, RWTextureBuffer };
 use crate::shader_program::ShaderProgram;
 
-const PRESSURE_ITERATIONS: usize = 20;
+const MIN_PRESSURE_ITERATIONS: usize = 20;
 const FPS_30: f32 = 0.0333333;
 
 #[repr(u8)]
@@ -119,6 +119,7 @@ impl Renderer {
         pause: bool,
         time: f32,
         mode: Mode,
+        iterations: usize,
         viscosity: f32,
         dissipation: f32,
         curl: f32,
@@ -150,7 +151,7 @@ impl Renderer {
 
             self.project_velocity(
                 &sim_resolution,
-                PRESSURE_ITERATIONS,
+                MIN_PRESSURE_ITERATIONS.max(iterations),
                 pressure,
             )?;
 

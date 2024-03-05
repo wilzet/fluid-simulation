@@ -6,10 +6,11 @@ import Pointer from "./pointer";
 const params = {
     isPaused: false,
     mode: Mode.DYE,
+    dyeResolution: Resolution.TWO,
     simResolution: isMobile() ? Resolution.EIGHT : Resolution.FOUR,
-    dyeResolution: isMobile() ? Resolution.FOUR : Resolution.TWO,
     pointerRadius: isMobile() ? 0.4 : 0.2,
     pointerStrength: 10.0,
+    iterations: 20,
     viscosity: 0.5,
     dissipation: 2.0,
     curl: 0.25,
@@ -78,7 +79,13 @@ const createGUI = () => {
     visualsFolder.open();
 
     const simulationFolder = gui.addFolder("Simulation");
-    simulationFolder.add(
+    simulationFolder.add(params, "viscosity", 0.0, 5.0, 0.01).name("Viscosity");
+    simulationFolder.add(params, "dissipation", 0.0, 5.0, 0.01).name("Dye diffusion");
+    simulationFolder.add(params, "curl", 0.0, 2.0, 0.01).name("Vorticity amount");
+    simulationFolder.open();
+
+    const advancedFolder = simulationFolder.addFolder("Advanced");
+    advancedFolder.add(
         params,
         "simResolution",
         {
@@ -90,12 +97,12 @@ const createGUI = () => {
         },
     )
         .name("Simulation quality")
-        .onFinishChange(resizeCanvas);
-    simulationFolder.add(params, "viscosity", 0.0, 5.0, 0.01).name("Viscosity");
-    simulationFolder.add(params, "dissipation", 0.0, 5.0, 0.01).name("Dye diffusion");
-    simulationFolder.add(params, "curl", 0.0, 2.0, 0.01).name("Vorticity amount");
-    simulationFolder.add(params, "pressure", 0.0, 1.0, 0.01).name("Pressure");
-    simulationFolder.open();
+        .onFinishChange((value: number) => {
+            params.iterations = isMobile() ? 20 : value <= 3 ? value <= 2 ? value <= 1 ? 50 : 40 : 30 : 20;
+            resizeCanvas();
+        });
+    advancedFolder.add(params, "pressure", 0.0, 1.0, 0.01).name("Pressure");
+    advancedFolder.add(params, "iterations", 10, isMobile() ? 50 : 80, 1).name("Solver iterations").listen();
 
     const colorFolder = gui.addFolder("Color");
     colorFolder.addColor(params, "color").name("Color").onFinishChange((value: number[]) => {
@@ -109,12 +116,11 @@ const createGUI = () => {
     gui.add(params, "isPaused").name("Pause").onChange(() => wasPaused = !wasPaused).listen();
 
     const gitHub = gui.add({ fun: () => window.open("https://github.com/wilzet/fluid-simulation") }, "fun").name("GitHub");
+    const icon = document.createElement("div");
+    icon.className = "github";
     const list = gitHub.domElement.parentElement?.parentElement;
     if (list) list.className += " link";
-    
-    const icon = document.createElement("div");
     list?.appendChild(icon);
-    icon.className = "github";
 
     if (isMobile()) gui.close();
 }
@@ -122,28 +128,27 @@ const createGUI = () => {
 const update = (timestamp: number) => {
     requestAnimationFrame(update);
 
-    const radius = params.pointerRadius * Math.min(canvas.width, canvas.height) * 10.0;
-
     if (pointer.isMoved) {
         renderer.splat(
-            radius,
+            params.pointerRadius * Math.min(canvas.width, canvas.height) * 10.0,
             pointer.getPosition,
             pointer.getVelocity,
             pointerColor,
         );
     }
 
+    pointer.resetMove();
+
     renderer.update(
         params.isPaused,
         timestamp / 1000,
         params.mode,
+        params.iterations,
         params.viscosity,
         params.dissipation,
         -params.curl,
         params.pressure,
     );
-
-    pointer.resetMove();
 }
 
 const pointerEvents = () => {
