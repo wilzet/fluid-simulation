@@ -1,4 +1,5 @@
-export const defaultColor = [47, 161, 214];
+export const defaultBlueColor = [47, 161, 214];
+export const defaultRedColor = [214, 61, 47];
 
 export function isMobile() {
     const toMatch = [

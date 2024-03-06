@@ -1,8 +1,12 @@
 import * as dat from "dat.gui";
 import { Renderer, Resolution, Mode } from "fluid-simulation";
-import { isMobile, pixelScaling, randomColor, defaultColor } from "./utils";
-import { Params, Config } from "./params";
+import { isMobile, pixelScaling, randomColor, defaultBlueColor, defaultRedColor } from "./utils";
 import Pointer from "./pointer";
+
+enum Configuration {
+    NONE,
+    SPELLS,
+};
 
 const params = {
     isPaused: false,
@@ -16,11 +20,29 @@ const params = {
     dissipation: 2.0,
     curl: 0.25,
     pressure: 0.8,
-    color: defaultColor,
+    color: defaultBlueColor,
     useRandomColor: true,
-    config: Config.NONE,
-} as Params;
+    config: Configuration.NONE,
+};
 let wasPaused = false;
+
+const config = {
+    position: new Float32Array([0.0, 0.0]),
+    velocity: new Float32Array([0.0, 0.0]),
+    color: new Float32Array([0.0, 0.0, 0.0]),
+    lColor: defaultRedColor,
+    lRadius: isMobile() ? 0.4 : 0.2,
+    lStrength: 10.0,
+    lXOffset: 0.05,
+    lYOffset: 0.0,
+    rColor: defaultBlueColor.slice(),
+    rRadius: isMobile() ? 0.4 : 0.2,
+    rStrength: 10.0,
+    rXOffset: 0.05,
+    rYOffset: 0.0,
+};
+const pointer = new Pointer([0, 0]);
+const pointerColor = new Float32Array(params.color.map((v) => v / 255.0));
 
 const canvasId = "canvas";
 const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -31,42 +53,13 @@ const renderer = Renderer.create(
     params.dyeResolution,
 );
 
-const pointer = new Pointer([0, 0]);
-const pointerColor = new Float32Array(params.color.map((v) => v / 255.0));
-let configPosition = new Float32Array([0.0, 0.0]);
-let configVelocity = new Float32Array([0.0, 0.0]);
-
 const generateColor = () => {
     if (!params.useRandomColor) return;
 
-    const color = randomColor(undefined, undefined, 0.5, 0.9, 0.3, 0.5);
-    color.forEach((v, i) => {
+    randomColor(undefined, undefined, 0.5, 0.9, 0.3, 0.5).forEach((v, i) => {
         pointerColor[i] = v;
         params.color[i] = v * 255.0;
     });
-}
-
-const spellConfig = (radius: number) => {
-    configPosition[0] = 100.0;
-    configPosition[1] = canvas.height / 2.0;
-    configVelocity[0] = 10.0 * params.pointerStrength;
-    let color = randomColor(0, 10, 0.6, 0.9, 0.2, 0.3);
-    renderer.splat(
-        radius,
-        configPosition,
-        configVelocity,
-        new Float32Array(color),
-    );
-
-    configPosition[0] = canvas.width - 100.0;
-    configVelocity[0] = -configVelocity[0];
-    color = randomColor(215, 225, 0.2, 0.6, 0.2, 0.3);
-    renderer.splat(
-        radius,
-        configPosition,
-        configVelocity,
-        new Float32Array(color),
-    );
 }
 
 const resizeCanvas = () => {
@@ -130,25 +123,48 @@ const createGUI = () => {
         });
     advancedFolder.add(params, "pressure", 0.0, 1.0, 0.01).name("Pressure");
     advancedFolder.add(params, "iterations", 10, isMobile() ? 50 : 80, 1).name("Solver iterations").listen();
-
-    const colorFolder = gui.addFolder("Color");
-    colorFolder.addColor(params, "color").name("Color").onFinishChange((value: number[]) => {
-        value.forEach((v, i) => pointerColor[i] = v / 255.0);
-        params.useRandomColor = false;
-    }).listen();
-    colorFolder.add(params, "useRandomColor").name("Random color").listen();
     
-    gui.add(
+    const configurationFolder = gui.addFolder("Configuration");
+    let settingsFolder: dat.GUI;
+    configurationFolder.add(
         params,
         "config",
         {
-            "None": Config.NONE,
-            "Spell": Config.SPELL,
+            "None": Configuration.NONE,
+            "Spell": Configuration.SPELLS,
         },
     )
-        .name("Configuration");
-    gui.add(params, "pointerRadius", 0.01, 1.0, 0.01).name("Radius");
-    gui.add(params, "pointerStrength", 0.5, 100.0, 0.01).name("Strength");
+        .name("Configuration")
+        .onFinishChange((value: number) => {
+            if (value == Configuration.NONE) {
+                configurationFolder.removeFolder(settingsFolder);
+            } else if (value == Configuration.SPELLS) {
+                settingsFolder = configurationFolder.addFolder("Spell Settings");
+                const leftFolder = settingsFolder.addFolder("Left");
+                leftFolder.addColor(config, "lColor").name("Color");
+                leftFolder.add(config, "lRadius", 0.01, 2.0, 0.01).name("Radius");
+                leftFolder.add(config, "lStrength", 0.0, 100.0, 0.01).name("Strength");
+                leftFolder.add(config, "lXOffset", 0.0, 1.0, 0.01).name("X");
+                leftFolder.add(config, "lYOffset", -1.0, 1.0, 0.01).name("Y");
+
+                const rightFolder = settingsFolder.addFolder("Right");
+                rightFolder.addColor(config, "rColor").name("Color");
+                rightFolder.add(config, "rRadius", 0.01, 2.0, 0.01).name("Radius");
+                rightFolder.add(config, "rStrength", 0.0, 100.0, 0.01).name("Strength");
+                rightFolder.add(config, "rXOffset", 0.0, 1.0, 0.01).name("X");
+                rightFolder.add(config, "rYOffset", -1.0, 1.0, 0.01).name("Y");
+            }
+        });
+
+    const pointerFolder = gui.addFolder("Pointer");
+    pointerFolder.addColor(params, "color").name("Color").onFinishChange((value: number[]) => {
+        value.forEach((v, i) => pointerColor[i] = v / 255.0);
+        params.useRandomColor = false;
+    }).listen();
+    pointerFolder.add(params, "useRandomColor").name("Random color").listen();
+    pointerFolder.add(params, "pointerRadius", 0.01, 1.0, 0.01).name("Radius");
+    pointerFolder.add(params, "pointerStrength", 0.5, 100.0, 0.01).name("Strength");
+
     gui.add(params, "isPaused").name("Pause").onChange(() => wasPaused = !wasPaused).listen();
 
     const gitHub = gui.add({ fun: () => window.open("https://github.com/wilzet/fluid-simulation") }, "fun").name("GitHub");
@@ -161,14 +177,40 @@ const createGUI = () => {
     if (isMobile()) gui.close();
 }
 
+const spellConfig = (radius: number) => {
+    const height = canvas.height;
+    const width = canvas.width;
+    config.position[0] = width * config.lXOffset;
+    config.position[1] = (1 + config.lYOffset) * height / 2.0;
+    config.velocity[0] = 10.0 * config.lStrength;
+    config.lColor.forEach((v, i) => config.color[i] = v / 255.0);
+    renderer.splat(
+        radius * config.lRadius,
+        config.position,
+        config.velocity,
+        config.color,
+    );
+
+    config.position[0] = (1.0 - config.rXOffset) * width;
+    config.position[1] = (1 + config.rYOffset) * height / 2.0;
+    config.velocity[0] = -10.0 * config.rStrength;
+    config.rColor.forEach((v, i) => config.color[i] = v / 255.0);
+    renderer.splat(
+        radius * config.rRadius,
+        config.position,
+        config.velocity,
+        config.color,
+    );
+}
+
 const update = (timestamp: number) => {
     requestAnimationFrame(update);
 
-    const radius = params.pointerRadius * Math.min(canvas.width, canvas.height) * 10.0;
+    const radius = Math.min(canvas.width, canvas.height) * 10.0;
 
     if (pointer.isMoved) {
         renderer.splat(
-            radius,
+            radius * params.pointerRadius,
             pointer.getPosition,
             pointer.getVelocity,
             pointerColor,
@@ -176,7 +218,7 @@ const update = (timestamp: number) => {
     }
 
     if (!params.isPaused) {
-        if (params.config == Config.SPELL) spellConfig(radius);
+        if (params.config == Configuration.SPELLS) spellConfig(radius);
     }
 
     renderer.update(
