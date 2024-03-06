@@ -6,6 +6,7 @@ import Pointer from "./pointer";
 enum Configuration {
     NONE,
     SPELLS,
+    SPIN,
 };
 
 const params = {
@@ -31,12 +32,12 @@ const config = {
     velocity: new Float32Array([0.0, 0.0]),
     color: new Float32Array([0.0, 0.0, 0.0]),
     lColor: defaultRedColor,
-    lRadius: isMobile() ? 0.4 : 0.2,
+    lRadius: 0.2,
     lStrength: 10.0,
     lXOffset: 0.05,
     lYOffset: 0.0,
     rColor: defaultBlueColor.slice(),
-    rRadius: isMobile() ? 0.4 : 0.2,
+    rRadius: 0.2,
     rStrength: 10.0,
     rXOffset: 0.05,
     rYOffset: 0.0,
@@ -125,34 +126,58 @@ const createGUI = () => {
     advancedFolder.add(params, "iterations", 10, isMobile() ? 50 : 80, 1).name("Solver iterations").listen();
     
     const configurationFolder = gui.addFolder("Configuration");
-    let settingsFolder: dat.GUI;
+    let settingsFolder: dat.GUI | undefined;
     configurationFolder.add(
         params,
         "config",
         {
             "None": Configuration.NONE,
-            "Spell": Configuration.SPELLS,
+            "Spells": Configuration.SPELLS,
+            "Spin": Configuration.SPIN,
         },
     )
         .name("Configuration")
         .onFinishChange((value: number) => {
-            if (value == Configuration.NONE) {
+            if (settingsFolder) {
                 configurationFolder.removeFolder(settingsFolder);
-            } else if (value == Configuration.SPELLS) {
+                settingsFolder = undefined;
+            }
+
+            if (value == Configuration.SPELLS) {
                 settingsFolder = configurationFolder.addFolder("Spell Settings");
+                
                 const leftFolder = settingsFolder.addFolder("Left");
                 leftFolder.addColor(config, "lColor").name("Color");
+                config.lRadius = Math.min(config.lRadius, 2.0);
                 leftFolder.add(config, "lRadius", 0.01, 2.0, 0.01).name("Radius");
                 leftFolder.add(config, "lStrength", 0.0, 100.0, 0.01).name("Strength");
+                config.lXOffset = Math.max(config.lXOffset, 0.0);
                 leftFolder.add(config, "lXOffset", 0.0, 1.0, 0.01).name("X");
                 leftFolder.add(config, "lYOffset", -1.0, 1.0, 0.01).name("Y");
 
                 const rightFolder = settingsFolder.addFolder("Right");
                 rightFolder.addColor(config, "rColor").name("Color");
+                config.rRadius = Math.max(Math.min(config.rRadius, 2.0), 0.01);
                 rightFolder.add(config, "rRadius", 0.01, 2.0, 0.01).name("Radius");
+                config.rStrength = Math.max(config.rStrength, 0.0);
                 rightFolder.add(config, "rStrength", 0.0, 100.0, 0.01).name("Strength");
                 rightFolder.add(config, "rXOffset", 0.0, 1.0, 0.01).name("X");
                 rightFolder.add(config, "rYOffset", -1.0, 1.0, 0.01).name("Y");
+
+                settingsFolder.open();
+            } else if (value == Configuration.SPIN) {
+                settingsFolder = configurationFolder.addFolder("Spin Settings");
+                settingsFolder.add(config, "rRadius", -2 * Math.PI, 2 * Math.PI, 0.01).name("Rotation speed");
+                config.rStrength = Math.min(config.rStrength, Math.PI);
+                settingsFolder.add(config, "rStrength", -Math.PI, Math.PI, 0.01).name("Angular offset");
+                settingsFolder.addColor(config, "lColor").name("Color");
+                settingsFolder.add(config, "lRadius", 0.01, 3.0, 0.01).name("Radius");
+                settingsFolder.add(config, "lStrength", 0.0, 100.0, 0.01).name("Strength");
+                // Swap X and Y because of initial offset
+                settingsFolder.add(config, "lYOffset", -1.0, 1.0, 0.01).name("X");
+                settingsFolder.add(config, "lXOffset", -1.0, 1.0, 0.01).name("Y");
+
+                settingsFolder.open();
             }
         });
 
@@ -164,6 +189,7 @@ const createGUI = () => {
     pointerFolder.add(params, "useRandomColor").name("Random color").listen();
     pointerFolder.add(params, "pointerRadius", 0.01, 1.0, 0.01).name("Radius");
     pointerFolder.add(params, "pointerStrength", 0.5, 100.0, 0.01).name("Strength");
+    pointerFolder.open();
 
     gui.add(params, "isPaused").name("Pause").onChange(() => wasPaused = !wasPaused).listen();
 
@@ -178,11 +204,13 @@ const createGUI = () => {
 }
 
 const spellConfig = (radius: number) => {
-    const height = canvas.height;
     const width = canvas.width;
+    const halfHeight = canvas.height * 0.5;
+
     config.position[0] = width * config.lXOffset;
-    config.position[1] = (1 + config.lYOffset) * height / 2.0;
+    config.position[1] = (1 + config.lYOffset) * halfHeight;
     config.velocity[0] = 10.0 * config.lStrength;
+    config.velocity[1] = 0.0;
     config.lColor.forEach((v, i) => config.color[i] = v / 255.0);
     renderer.splat(
         radius * config.lRadius,
@@ -192,11 +220,26 @@ const spellConfig = (radius: number) => {
     );
 
     config.position[0] = (1.0 - config.rXOffset) * width;
-    config.position[1] = (1 + config.rYOffset) * height / 2.0;
+    config.position[1] = (1 + config.rYOffset) * halfHeight;
     config.velocity[0] = -10.0 * config.rStrength;
     config.rColor.forEach((v, i) => config.color[i] = v / 255.0);
     renderer.splat(
         radius * config.rRadius,
+        config.position,
+        config.velocity,
+        config.color,
+    );
+}
+
+const spinConfig = (radius: number, timestamp: number) => {
+    // Swap X and Y because of initial offset
+    config.position[0] = (1 + config.lYOffset) * canvas.width * 0.5;
+    config.position[1] = (1 + config.lXOffset) * canvas.height * 0.5;
+    config.velocity[0] = Math.cos(config.rRadius * timestamp + config.rStrength) * 10.0 * config.lStrength;
+    config.velocity[1] = Math.sin(config.rRadius * timestamp + config.rStrength) * 10.0 * config.lStrength;
+    config.lColor.forEach((v, i) => config.color[i] = v / 255.0);
+    renderer.splat(
+        radius * config.lRadius,
         config.position,
         config.velocity,
         config.color,
@@ -219,6 +262,7 @@ const update = (timestamp: number) => {
 
     if (!params.isPaused) {
         if (params.config == Configuration.SPELLS) spellConfig(radius);
+        else if (params.config == Configuration.SPIN) spinConfig(radius, timestamp / 1000);
     }
 
     renderer.update(
