@@ -1,6 +1,6 @@
 import * as dat from "dat.gui";
 import { Renderer, Resolution, Mode } from "fluid-simulation";
-import { isMobile, pixelScaling, randomColor, defaultBlueColor, defaultRedColor } from "./utils";
+import { resizeCanvas, isMobile, pixelScaling, randomColor, defaultBlueColor, defaultRedColor } from "./utils";
 import Pointer from "./pointer";
 
 enum Configuration {
@@ -47,12 +47,14 @@ const pointerColor = new Float32Array(params.color.map((v) => v / 255.0));
 
 const canvasId = "canvas";
 const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+resizeCanvas(canvas);
 
-const renderer = Renderer.create(
-    canvasId,
-    params.simResolution,
-    params.dyeResolution,
-);
+const renderer = Renderer.create(canvasId, params.simResolution, params.dyeResolution);
+
+const resizeSimulation = () => {
+    resizeCanvas(canvas);
+    renderer.resize(params.simResolution, params.dyeResolution);
+}
 
 const generateColor = () => {
     if (!params.useRandomColor) return;
@@ -63,15 +65,15 @@ const generateColor = () => {
     });
 }
 
-const resizeCanvas = () => {
-    canvas.width = pixelScaling(canvas.clientWidth);
-    canvas.height = pixelScaling(canvas.clientHeight);
-
-    renderer.resize(params.simResolution, params.dyeResolution);
-}
-
 const createGUI = () => {
-    const gui = new dat.GUI({ closeOnTop: true });
+    const resolutions = {
+        "Ultra+": Resolution.ONE,
+        "Ultra": Resolution.TWO,
+        "High": Resolution.FOUR,
+        "Medium": Resolution.EIGHT,
+        "Low": Resolution.SIXTEEN,
+    };
+    const gui = new dat.GUI({ closeOnTop: true, hideable: true });
 
     const visualsFolder = gui.addFolder("Visuals");
     visualsFolder.add(
@@ -84,19 +86,9 @@ const createGUI = () => {
         },
     )
         .name("Mode");
-    visualsFolder.add(
-        params,
-        "dyeResolution",
-        {
-            "Ultra+": Resolution.ONE,
-            "Ultra": Resolution.TWO,
-            "High": Resolution.FOUR,
-            "Medium": Resolution.EIGHT,
-            "Low": Resolution.SIXTEEN,
-        },
-    )
+    visualsFolder.add(params, "dyeResolution", resolutions)
         .name("Quality")
-        .onFinishChange(resizeCanvas);
+        .onFinishChange(resizeSimulation);
     visualsFolder.open();
 
     const simulationFolder = gui.addFolder("Simulation");
@@ -106,21 +98,11 @@ const createGUI = () => {
     simulationFolder.open();
 
     const advancedFolder = simulationFolder.addFolder("Advanced");
-    advancedFolder.add(
-        params,
-        "simResolution",
-        {
-            "Ultra+": Resolution.ONE,
-            "Ultra": Resolution.TWO,
-            "High": Resolution.FOUR,
-            "Medium": Resolution.EIGHT,
-            "Low": Resolution.SIXTEEN,
-        },
-    )
+    advancedFolder.add(params, "simResolution", resolutions)
         .name("Simulation quality")
         .onFinishChange((value: number) => {
             params.iterations = isMobile() ? 20 : value <= 3 ? value <= 2 ? value <= 1 ? 50 : 40 : 30 : 20;
-            resizeCanvas();
+            resizeSimulation();
         });
     advancedFolder.add(params, "pressure", 0.0, 1.0, 0.01).name("Pressure");
     advancedFolder.add(params, "iterations", 10, isMobile() ? 50 : 80, 1).name("Solver iterations").listen();
@@ -328,26 +310,22 @@ const pointerEvents = () => {
 }
 
 const run = () => {
-    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("resize", resizeSimulation);
 
     document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
             params.isPaused = true;
             pointer.up();
-        } else if (!wasPaused) {
-            params.isPaused = false;
+        } else {
+            params.isPaused = wasPaused;
         }
     });
 
     window.addEventListener("keydown", (e) => {
-        if (e.code === "Space") {
-            params.isPaused = !params.isPaused;
-        }
+        if (e.code === "Space") params.isPaused = !params.isPaused;
     });
 
     pointerEvents();
-
-    resizeCanvas();
 
     createGUI();
 
