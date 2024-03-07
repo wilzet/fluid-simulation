@@ -1,6 +1,11 @@
 export const defaultBlueColor = [47, 161, 214];
 export const defaultRedColor = [214, 61, 47];
 
+export function resizeCanvas(canvas: HTMLCanvasElement) {
+    canvas.width = pixelScaling(canvas.clientWidth);
+    canvas.height = pixelScaling(canvas.clientHeight);
+}
+
 export function isMobile() {
     const toMatch = [
         /Android/i,
