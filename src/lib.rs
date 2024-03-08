@@ -49,9 +49,11 @@ pub struct Renderer {
     curl_program: ShaderProgram,
     vorticity_program: ShaderProgram,
     splat_program: ShaderProgram,
+    obstacle_program: ShaderProgram,
     velocity_buffer: RWTextureBuffer,
     pressure_buffer: RWTextureBuffer,
     dye_buffer: RWTextureBuffer,
+    obstacle_store: TextureFramebuffer,
     temp_store: TextureFramebuffer,
     last_time: f32,
 }
@@ -147,6 +149,7 @@ impl Renderer {
                 viscosity,
                 None,
                 &mut self.velocity_buffer,
+                &self.obstacle_store,
             )?;
 
             self.project_velocity(
@@ -164,6 +167,7 @@ impl Renderer {
                 dissipation,
                 Some(&self.velocity_buffer),
                 &mut self.dye_buffer,
+                &self.obstacle_store,
             )?;
         }
 
@@ -228,6 +232,18 @@ impl Renderer {
             height,
         )?;
 
+        if width != self.obstacle_store.width() || height != self.obstacle_store.height() {
+            self.obstacle_store.delete(gl);
+            self.obstacle_store = TextureFramebuffer::new(
+                gl,
+                width,
+                height,
+                WebGl2RenderingContext::NEAREST,
+            )?;
+
+            self.set_obstacle(None, &[0.0, 0.0], true)?;
+        }
+
         Ok(())
     }
 
@@ -258,7 +274,6 @@ impl Renderer {
 
         // APPLY FORCE
         let resolution = self.sim_resolution as u32 as f32;
-
         gl.uniform1f(
             self.splat_program.uniforms.get(shaders::U_SCALED_RADIUS),
             radius / (resolution * resolution),
@@ -277,6 +292,10 @@ impl Renderer {
         gl.uniform1i(
             self.splat_program.uniforms.get(shaders::U_TEXTURE),
             self.velocity_buffer.read().bind(gl, 0)?,
+        );
+        gl.uniform1i(
+            self.splat_program.uniforms.get(shaders::U_OBSTACLES),
+            self.obstacle_store.bind(gl, 1)?,
         );
 
         Renderer::blit(
@@ -312,6 +331,40 @@ impl Renderer {
             None,
         );
         self.dye_buffer.swap();
+
+        Ok(())
+    }
+
+    pub fn set_obstacle(
+        &self,
+        radius: Option<f32>,
+        position: &[f32],
+        is_circle: bool,
+    ) -> Result<(), JsValue> {
+        let gl = &self.gl;
+        self.obstacle_program.bind(gl);
+
+        // SET OBSTACLE
+        let resolution = self.dye_resolution as u32 as f32;
+        gl.uniform1i(
+            self.obstacle_program.uniforms.get(shaders::U_IS_CIRCLE),
+            is_circle as i32,
+        );
+        gl.uniform1f(
+            self.obstacle_program.uniforms.get(shaders::U_SCALED_RADIUS_SQR),
+            radius.map_or(-10.0, |r| r * r / (resolution * resolution)),
+        );
+        gl.uniform2f(
+            self.obstacle_program.uniforms.get(shaders::U_POSITION),
+            position[0] / resolution,
+            position[1] / resolution,
+        );
+
+        Renderer::blit(
+            gl,
+            Some(&self.obstacle_store),
+            None,
+        );
 
         Ok(())
     }
