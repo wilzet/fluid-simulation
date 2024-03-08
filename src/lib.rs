@@ -335,6 +335,20 @@ impl Renderer {
         Ok(())
     }
 
+    /// Set obstacle
+    /// 
+    /// Set either a circular or square obstacle.
+    /// 
+    /// # Arguments
+    /// * `radius` - Radius of the obstacle in pixels (in the case of a square it is half the sidelength in pixels). If this value is `undefined`, no obstacle will be set
+    /// * `position` - A float array that should have two values, an x and a y position in screen coordinates
+    /// * `is_circle` - A boolean value deciding whether the obstacle is a circle or a square
+    /// 
+    /// # Returns
+    /// May return an error if something in the WebGL pipeline were to break.
+    ///
+    /// # Panics
+    /// If `position` contains fewer than two values
     pub fn set_obstacle(
         &self,
         radius: Option<f32>,
