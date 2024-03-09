@@ -24,6 +24,7 @@ const params = {
     color: defaultBlueColor.slice(),
     useRandomColor: true,
     config: Configuration.NONE,
+    obstacle: false,
 };
 let wasPaused = false;
 
@@ -41,6 +42,10 @@ const config = {
     rStrength: 10.0,
     rXOffset: 0.0,
     rYOffset: 0.0,
+    obstacleXOffset: 0.0,
+    obstacleYOffset: 0.0,
+    obstacleRadius: 100.0,
+    obstacleCircle: true,
 };
 const pointer = new Pointer([0, 0]);
 const pointerColor = new Float32Array(params.color.map((v) => v / 255.0));
@@ -82,7 +87,6 @@ const createGUI = () => {
         {
             "Dye": Mode.DYE,
             "Velocity": Mode.VELOCITY,
-            "Pressure": Mode.PRESSURE,
         },
     )
         .name("Mode");
@@ -109,6 +113,7 @@ const createGUI = () => {
     
     const configurationFolder = gui.addFolder("Configuration");
     let settingsFolder: dat.GUI | undefined;
+    let obstacleFolder: dat.GUI | undefined;
     configurationFolder.add(
         params,
         "config",
@@ -168,6 +173,30 @@ const createGUI = () => {
                 settingsFolder.open();
             }
         });
+    configurationFolder.add(params, "obstacle").name("Use obstacle").onFinishChange((value: boolean) => {
+        if (obstacleFolder) {
+            configurationFolder.removeFolder(obstacleFolder);
+            obstacleFolder = undefined;
+        }
+
+        if (!value) {
+            renderer.set_obstacle(
+                undefined,
+                config.position,
+                true,
+            );
+        } else {
+            config.obstacleRadius = 100.0;
+            config.obstacleXOffset = 0.0;
+            config.obstacleYOffset = 0.0;
+            
+            obstacleFolder = configurationFolder.addFolder("Obstacle Settings");
+            obstacleFolder.add(config, "obstacleRadius", 0.01, Math.max(canvas.width, canvas.height) * 0.5, 1.0).name("Radius");
+            obstacleFolder.add(config, "obstacleXOffset", -1.0, 1.0, 0.01).name("X");
+            obstacleFolder.add(config, "obstacleYOffset", -1.0, 1.0, 0.01).name("Y");
+            obstacleFolder.add(config, "obstacleCircle").name("Use circle");
+        }
+    });
 
     const pointerFolder = gui.addFolder("Pointer");
     pointerFolder.addColor(params, "color").name("Color").onFinishChange((value: number[]) => {
@@ -179,7 +208,7 @@ const createGUI = () => {
     pointerFolder.add(params, "pointerStrength", 0.5, 100.0, 0.01).name("Strength");
     pointerFolder.open();
 
-    gui.add(params, "isPaused").name("Pause").onChange(() => wasPaused = !wasPaused).listen();
+    gui.add(params, "isPaused").name("Pause").onFinishChange(() => wasPaused = !wasPaused).listen();
 
     const gitHub = gui.add({ fun: () => window.open("https://github.com/wilzet/fluid-simulation") }, "fun").name("GitHub");
     const icon = document.createElement("div");
@@ -235,10 +264,22 @@ const spinConfig = (radius: number, timestamp: number) => {
     );
 }
 
+const obstacleConfig = () => {
+    config.position[0] = (1 + config.obstacleXOffset) * canvas.width * 0.5;
+    config.position[1] = (1 + config.obstacleYOffset) * canvas.height * 0.5;
+    renderer.set_obstacle(
+        config.obstacleRadius,
+        config.position,
+        config.obstacleCircle,
+    );
+}
+
 const update = (timestamp: number) => {
     requestAnimationFrame(update);
 
     const radius = Math.min(canvas.width, canvas.height) * 10.0;
+
+    if (params.obstacle) obstacleConfig();
 
     if (pointer.isMoved) {
         renderer.splat(

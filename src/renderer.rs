@@ -25,7 +25,7 @@ impl Renderer {
         )?;
         let jacobi_program = ShaderProgram::new(
             &gl,
-            shaders::JACOBI_SOLVER_SHADER_SOURCE,
+            shaders::PRESSURE_SOLVER_SHADER_SOURCE,
             shaders::VERTEX_SHADER_SOURCE,
         )?;
         let divergence_program = ShaderProgram::new(
@@ -51,6 +51,11 @@ impl Renderer {
         let splat_program = ShaderProgram::new(
             &gl,
             shaders::SPLAT_SHADER_SOURCE,
+            shaders::VERTEX_SHADER_SOURCE,
+        )?;
+        let obstacle_program = ShaderProgram::new(
+            &gl,
+            shaders::OBSTACLE_SHADER_SOURCE,
             shaders::VERTEX_SHADER_SOURCE,
         )?;
 
@@ -84,9 +89,16 @@ impl Renderer {
             Some(WebGl2RenderingContext::LINEAR),
         )?;
 
+        let obstacle_store = TextureFramebuffer::new(
+            &gl,
+            width,
+            height,
+            WebGl2RenderingContext::NEAREST,
+        )?;
+
         Renderer::init_quad_buffers(&gl)?;
 
-        Ok(Renderer {
+        let renderer = Renderer {
             gl,
             canvas,
             sim_resolution,
@@ -99,12 +111,18 @@ impl Renderer {
             curl_program,
             vorticity_program,
             splat_program,
+            obstacle_program,
             velocity_buffer,
             pressure_buffer,
             dye_buffer,
+            obstacle_store,
             temp_store,
             last_time: 0.0,
-        })
+        };
+
+        renderer.set_obstacle(None, &[0.0, 0.0], true)?;
+
+        Ok(renderer)
     }
 
     fn init_quad_buffers(gl: &WebGl2RenderingContext) -> Result<(), JsValue> {
@@ -185,7 +203,7 @@ impl Renderer {
         );
     }
 
-    fn jacobi_solve(
+    fn pressure_solve(
         gl: &WebGl2RenderingContext,
         jacobi_program: &ShaderProgram,
         iterations: usize,
@@ -194,6 +212,7 @@ impl Renderer {
         r_beta: f32,
         x: &mut RWTextureBuffer,
         b: Option<&TextureFramebuffer>,
+        obstacle: &TextureFramebuffer,
     ) -> Result<(), JsValue> {
         jacobi_program.bind(gl);
 
@@ -214,6 +233,10 @@ impl Renderer {
             b.and_then(|b|
                 b.bind(gl, 1).ok()
             ).unwrap_or(0),
+        );
+        gl.uniform1i(
+            jacobi_program.uniforms.get(shaders::U_OBSTACLES),
+            obstacle.bind(gl, 2)?,
         );
 
         for _ in 0..iterations {
@@ -242,14 +265,14 @@ impl Renderer {
             self.copy_program.uniforms.get(shaders::U_FACTOR),
             match mode {
                 Mode::DYE => 1.0,
-                _ => 0.5,
+                Mode::VELOCITY => 0.1,
             },
         );
         gl.uniform1f(
             self.copy_program.uniforms.get(shaders::U_OFFSET),
             match mode {
                 Mode::DYE => 0.0,
-                _ => 0.5,
+                Mode::VELOCITY => 0.5,
             },
         );
         gl.uniform1i(
@@ -257,7 +280,6 @@ impl Renderer {
             match mode {
                 Mode::DYE => self.dye_buffer.read().bind(gl, 0)?,
                 Mode::VELOCITY => self.velocity_buffer.read().bind(gl, 0)?,
-                Mode::PRESSURE => self.pressure_buffer.read().bind(gl, 0)?,
             },
         );
 
@@ -278,6 +300,7 @@ impl Renderer {
         dissipation: f32,
         velocity_buffer: Option<&RWTextureBuffer>,
         quantity: &mut RWTextureBuffer,
+        obstacle: &TextureFramebuffer,
     ) -> Result<(), JsValue> {
         advection_program.bind(gl);
 
@@ -302,6 +325,10 @@ impl Renderer {
         gl.uniform1i(
             advection_program.uniforms.get(shaders::U_QUANTITY),
             quantity.read().bind(gl, 0)?,
+        );
+        gl.uniform1i(
+            advection_program.uniforms.get(shaders::U_OBSTACLES),
+            obstacle.bind(gl, 2)?,
         );
 
         Renderer::blit(
@@ -338,6 +365,10 @@ impl Renderer {
             self.divergence_program.uniforms.get(shaders::U_VELOCITY),
             self.velocity_buffer.read().bind(gl, 0)?,
         );
+        gl.uniform1i(
+            self.divergence_program.uniforms.get(shaders::U_OBSTACLES),
+            self.obstacle_store.bind(gl, 1)?,
+        );
 
         Renderer::blit(
             gl,
@@ -371,7 +402,7 @@ impl Renderer {
         let alpha = self.sim_resolution as u32 as f32;
         let alpha = -alpha * alpha;
         let r_beta = 0.25;
-        Renderer::jacobi_solve(
+        Renderer::pressure_solve(
             gl,
             &self.jacobi_program,
             iterations,
@@ -380,6 +411,7 @@ impl Renderer {
             r_beta,
             &mut self.pressure_buffer,
             Some(&self.temp_store),
+            &self.obstacle_store,
         )?;
 
         // SUBTRACTION
@@ -400,6 +432,10 @@ impl Renderer {
         gl.uniform1i(
             self.subtraction_program.uniforms.get(shaders::U_PRESSURE),
             self.pressure_buffer.read().bind(gl, 1)?,
+        );
+        gl.uniform1i(
+            self.subtraction_program.uniforms.get(shaders::U_OBSTACLES),
+            self.obstacle_store.bind(gl, 2)?,
         );
 
         Renderer::blit(
