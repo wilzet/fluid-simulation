@@ -87,7 +87,6 @@ const createGUI = () => {
         {
             "Dye": Mode.DYE,
             "Velocity": Mode.VELOCITY,
-            "Pressure": Mode.PRESSURE,
         },
     )
         .name("Mode");

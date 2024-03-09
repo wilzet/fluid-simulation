@@ -31,7 +31,6 @@ pub enum Resolution {
 pub enum Mode {
     DYE,
     VELOCITY,
-    PRESSURE,
 }
 
 #[wasm_bindgen]

@@ -265,14 +265,14 @@ impl Renderer {
             self.copy_program.uniforms.get(shaders::U_FACTOR),
             match mode {
                 Mode::DYE => 1.0,
-                _ => 0.5,
+                Mode::VELOCITY => 0.1,
             },
         );
         gl.uniform1f(
             self.copy_program.uniforms.get(shaders::U_OFFSET),
             match mode {
                 Mode::DYE => 0.0,
-                _ => 0.5,
+                Mode::VELOCITY => 0.5,
             },
         );
         gl.uniform1i(
@@ -280,7 +280,6 @@ impl Renderer {
             match mode {
                 Mode::DYE => self.dye_buffer.read().bind(gl, 0)?,
                 Mode::VELOCITY => self.velocity_buffer.read().bind(gl, 0)?,
-                Mode::PRESSURE => self.pressure_buffer.read().bind(gl, 0)?,
             },
         );
 

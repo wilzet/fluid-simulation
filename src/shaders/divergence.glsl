@@ -32,6 +32,5 @@ void main() {
     else if (gl_FragCoord.y > u_resolution.y - 1.0 || o_t < 0.5) { x_t = -x_c.y; }
 
     float divergence = (x_r - x_l + x_t - x_b) * u_r_half_texel_size;
-    float obstacle = texture2D(u_obstacles, v_uv).x;
-    gl_FragColor = vec4(divergence * obstacle, 0.0, 0.0, 0.0);
+    gl_FragColor = vec4(divergence, 0.0, 0.0, 0.0);
 } 

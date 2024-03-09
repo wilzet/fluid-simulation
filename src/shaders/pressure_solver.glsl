@@ -34,6 +34,5 @@ void main() {
     else if (gl_FragCoord.y > u_resolution.y - 1.0 || o_t < 0.5) { x_t = x_c; }
     
     vec4 bC = texture2D(u_b, v_uv);
-    float obstacle = texture2D(u_obstacles, v_uv).x;
-    gl_FragColor = (x_l + x_r + x_b + x_t + u_alpha * bC) * u_r_beta * obstacle;
+    gl_FragColor = (x_l + x_r + x_b + x_t + u_alpha * bC) * u_r_beta;
 } 
