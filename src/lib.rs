@@ -49,12 +49,14 @@ pub struct Renderer {
     vorticity_program: ShaderProgram,
     splat_program: ShaderProgram,
     obstacle_program: ShaderProgram,
+    color_obstacle_program: ShaderProgram,
     velocity_buffer: RWTextureBuffer,
     pressure_buffer: RWTextureBuffer,
     dye_buffer: RWTextureBuffer,
     obstacle_store: TextureFramebuffer,
     temp_store: TextureFramebuffer,
     last_time: f32,
+    obstacle_color: [f32; 3],
 }
 
 #[wasm_bindgen]
@@ -158,6 +160,14 @@ impl Renderer {
             )?;
 
             // UPDATE DYE
+            Renderer::color_obstacle(
+                &self.gl,
+                &self.color_obstacle_program,
+                &self.obstacle_store,
+                &mut self.dye_buffer,
+                &[0.0, 0.0, 0.0],
+            )?;
+
             Renderer::advect(
                 &self.gl,
                 &self.advection_program,
@@ -167,6 +177,14 @@ impl Renderer {
                 Some(&self.velocity_buffer),
                 &mut self.dye_buffer,
                 &self.obstacle_store,
+            )?;
+
+            Renderer::color_obstacle(
+                &self.gl,
+                &self.color_obstacle_program,
+                &self.obstacle_store,
+                &mut self.dye_buffer,
+                &self.obstacle_color,
             )?;
         }
 
@@ -240,7 +258,7 @@ impl Renderer {
                 WebGl2RenderingContext::NEAREST,
             )?;
 
-            self.set_obstacle(None, &[0.0, 0.0], true)?;
+            self.set_obstacle(None, &[0.0, 0.0], &[0.0, 0.0, 0.0], true)?;
         }
 
         Ok(())
@@ -341,20 +359,31 @@ impl Renderer {
     /// # Arguments
     /// * `radius` - Radius of the obstacle in pixels (in the case of a square it is half the sidelength in pixels). If this value is `undefined`, no obstacle will be set
     /// * `position` - A float array that should have two values, an x and a y position in screen coordinates
+    /// * `color` - A float array that should have three values, a red, a green, and a blue color value
     /// * `is_circle` - A boolean value deciding whether the obstacle is a circle or a square
     /// 
     /// # Returns
     /// May return an error if something in the WebGL pipeline were to break.
     ///
     /// # Panics
-    /// If `position` contains fewer than two values
+    /// If `position` contains fewer than two values, or if `color` contains fewer than three values.
     pub fn set_obstacle(
-        &self,
+        &mut self,
         radius: Option<f32>,
         position: &[f32],
+        color: &[f32],
         is_circle: bool,
     ) -> Result<(), JsValue> {
         let gl = &self.gl;
+
+        Renderer::color_obstacle(
+            gl,
+            &self.color_obstacle_program,
+            &self.obstacle_store,
+            &mut self.dye_buffer,
+            &[0.0, 0.0, 0.0],
+        )?;
+
         self.obstacle_program.bind(gl);
 
         // SET OBSTACLE
@@ -378,6 +407,9 @@ impl Renderer {
             Some(&self.obstacle_store),
             None,
         );
+
+        // SET COLOR
+        self.obstacle_color = [color[0], color[1], color[2]];
 
         Ok(())
     }

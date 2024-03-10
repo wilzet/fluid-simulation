@@ -42,9 +42,10 @@ const config = {
     rStrength: 10.0,
     rXOffset: 0.0,
     rYOffset: 0.0,
+    obstacleColor: [0, 0, 0],
+    obstacleRadius: 100.0,
     obstacleXOffset: 0.0,
     obstacleYOffset: 0.0,
-    obstacleRadius: 100.0,
     obstacleCircle: true,
 };
 const pointer = new Pointer([0, 0]);
@@ -183,6 +184,7 @@ const createGUI = () => {
             renderer.set_obstacle(
                 undefined,
                 config.position,
+                config.color,
                 true,
             );
         } else {
@@ -191,6 +193,7 @@ const createGUI = () => {
             config.obstacleYOffset = 0.0;
             
             obstacleFolder = configurationFolder.addFolder("Obstacle Settings");
+            obstacleFolder.addColor(config, "obstacleColor").name("Color");
             obstacleFolder.add(config, "obstacleRadius", 0.01, Math.max(canvas.width, canvas.height) * 0.5, 1.0).name("Radius");
             obstacleFolder.add(config, "obstacleXOffset", -1.0, 1.0, 0.01).name("X");
             obstacleFolder.add(config, "obstacleYOffset", -1.0, 1.0, 0.01).name("Y");
@@ -267,9 +270,11 @@ const spinConfig = (radius: number, timestamp: number) => {
 const obstacleConfig = () => {
     config.position[0] = (1 + config.obstacleXOffset) * canvas.width * 0.5;
     config.position[1] = (1 + config.obstacleYOffset) * canvas.height * 0.5;
+    config.obstacleColor.forEach((v, i) => config.color[i] = v / 255.0);
     renderer.set_obstacle(
         config.obstacleRadius,
         config.position,
+        config.color,
         config.obstacleCircle,
     );
 }
