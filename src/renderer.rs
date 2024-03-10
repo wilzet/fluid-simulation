@@ -58,6 +58,11 @@ impl Renderer {
             shaders::OBSTACLE_SHADER_SOURCE,
             shaders::VERTEX_SHADER_SOURCE,
         )?;
+        let color_obstacle_program = ShaderProgram::new(
+            &gl,
+            shaders::COLOR_OBSTACLE_SHADER_SOURCE,
+            shaders::VERTEX_SHADER_SOURCE,
+        )?;
 
         let (width, height) = Renderer::resolution_size(&canvas, sim_resolution);
         let velocity_buffer = RWTextureBuffer::new(
@@ -98,7 +103,7 @@ impl Renderer {
 
         Renderer::init_quad_buffers(&gl)?;
 
-        let renderer = Renderer {
+        let mut renderer = Renderer {
             gl,
             canvas,
             sim_resolution,
@@ -112,15 +117,17 @@ impl Renderer {
             vorticity_program,
             splat_program,
             obstacle_program,
+            color_obstacle_program,
             velocity_buffer,
             pressure_buffer,
             dye_buffer,
             obstacle_store,
             temp_store,
             last_time: 0.0,
+            obstacle_color: [0.0, 0.0, 0.0],
         };
 
-        renderer.set_obstacle(None, &[0.0, 0.0], true)?;
+        renderer.set_obstacle(None, &[0.0, 0.0], &[0.0, 0.0, 0.0], true)?;
 
         Ok(renderer)
     }
@@ -508,6 +515,38 @@ impl Renderer {
             None,
         );
         self.velocity_buffer.swap();
+
+        Ok(())
+    }
+
+    pub fn color_obstacle(
+        gl: &WebGl2RenderingContext,
+        color_obstacle_program: &ShaderProgram,
+        obstacle: &TextureFramebuffer,
+        texture: &mut RWTextureBuffer,
+        color: &[f32; 3],
+    ) -> Result<(), JsValue> {
+        color_obstacle_program.bind(gl);
+        
+        gl.uniform3fv_with_f32_array(
+            color_obstacle_program.uniforms.get(shaders::U_OBSTACLE_COLOR),
+            color,
+        );
+        gl.uniform1i(
+            color_obstacle_program.uniforms.get(shaders::U_OBSTACLES),
+            obstacle.bind(gl, 0)?,
+        );
+        gl.uniform1i(
+            color_obstacle_program.uniforms.get(shaders::U_TEXTURE),
+            texture.read().bind(gl, 1)?,
+        );
+
+        Renderer::blit(
+            gl,
+            Some(texture.write()),
+            None,
+        );
+        texture.swap();
 
         Ok(())
     }
