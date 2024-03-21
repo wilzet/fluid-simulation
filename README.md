@@ -31,10 +31,10 @@ A fluid simulation running in the browser using WebGL and Rust. This project was
    ```
 3. Run the following commands to start a dev server for the project:
    ```bash
-   python src/app/glsl-to-rust-stringify.py   # Generate the `shaders.rs` file
-   wasm-pack build                            # Build the fluid simulation package
-   npm install                                # Install required npm packages
-   npm run dev                                # Start a dev server on localhost:8080
+   python src/glsl-to-rust-stringify.py   # Generate the `shaders.rs` file
+   wasm-pack build                        # Build the fluid simulation package
+   npm install                            # Install required npm packages
+   npm run dev                            # Start a dev server on localhost:8080
    
    # npm run build   # Make a production build of the project in the /public directory
    ```
